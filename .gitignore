@@ -1,0 +1,6 @@
+node_modules
+dist
+# Seus dados financeiros NUNCA devem ir para o Git:
+backup-*.json
+dados-*.json
+*.local
