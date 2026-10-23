@@ -1,5 +1,11 @@
 node_modules
 dist
+coverage
+*.log
+.DS_Store
+Thumbs.db
+.env
+.env.*
 # Seus dados financeiros NUNCA devem ir para o Git:
 backup-*.json
 dados-*.json
