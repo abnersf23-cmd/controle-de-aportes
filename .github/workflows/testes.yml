@@ -1,0 +1,42 @@
+# Roda os testes automáticos a cada push e a cada pull request.
+# O resultado aparece na aba "Actions" do GitHub e no selo do README.
+name: Testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: # permite rodar na mão pela aba Actions
+
+# O workflow só precisa LER o código; nada de permissão de escrita.
+permissions:
+  contents: read
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Os servidores do GitHub usam UTC. Rodamos também no fuso de Brasília
+        # para pegar bugs de data que só aparecem no Brasil (ex.: depois das 21h).
+        fuso: [UTC, America/Sao_Paulo]
+    env:
+      TZ: ${{ matrix.fuso }}
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar o Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências (versões exatas do package-lock.json)
+        run: npm ci
+
+      - name: Rodar os testes
+        run: npm test
+
+      - name: Conferir se o app compila
+        run: npm run build
