@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { liveQuery } from 'dexie';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, TABLES } from '@/db/database';
-import { backupIfPossible, folderStatus } from '@/services/autoBackup';
+import { backupIfPossible, chooseFolder, folderStatus } from '@/services/autoBackup';
+import { useToast } from '@/components/ui/Toast';
 
 // Observa o banco: quando qualquer dado muda, espera 5 s sem novas mudanças
 // (debounce, para não gravar a cada tecla) e grava o backup na pasta escolhida.
@@ -46,4 +47,23 @@ export function useBackupFolder() {
     return () => window.removeEventListener('focus', onFocus);
   }, []);
   return { status, folderName: info?.dir?.name || null, lastAuto: info?.lastAuto || null, refresh: () => setTick(t => t + 1) };
+}
+
+// Abre a janela "escolher pasta" e avisa o resultado.
+// Importante: cancelar a janela (ou o Chrome recusar a pasta) não pode passar em silêncio,
+// senão parece que o backup foi ativado quando não foi.
+export function usePickFolder(onDone) {
+  const toast = useToast();
+  return async () => {
+    try {
+      const name = await chooseFolder();
+      toast(`Backup automático ativado na pasta "${name}". Primeiro backup gravado.`);
+      onDone?.();
+      return true;
+    } catch (e) {
+      if (e?.name === 'AbortError') toast('Nenhuma pasta foi escolhida, o backup automático NÃO foi ativado. Dica: o Chrome não aceita Documentos, Área de Trabalho ou Downloads direto; crie uma subpasta (ex.: Documentos\\Backup Aportes) e escolha ela.', { type: 'info', duration: 12000 });
+      else toast(e?.message || 'Não consegui usar essa pasta.', { type: 'error' });
+      return false;
+    }
+  };
 }

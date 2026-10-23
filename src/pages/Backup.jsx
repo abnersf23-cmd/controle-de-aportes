@@ -2,15 +2,15 @@ import { useRef, useState } from 'react';
 import { Download, FolderSync, HardDrive, ShieldCheck, Upload } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Notice, PageHeader } from '@/components/ui/Bits';
-import { useAction, useToast } from '@/components/ui/Toast';
+import { useAction } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/Confirm';
 import { db } from '@/db/database';
 import { exportBackup, importBackup } from '@/db/backup';
 import { downloadFile } from '@/lib/csv';
 import { daysSince } from '@/lib/finance';
 import { today } from '@/lib/dates';
-import { autoBackupSupported, chooseFolder, disableFolder, reactivate } from '@/services/autoBackup';
-import { useBackupFolder } from '@/hooks/useAutoBackup';
+import { autoBackupSupported, disableFolder, reactivate } from '@/services/autoBackup';
+import { useBackupFolder, usePickFolder } from '@/hooks/useAutoBackup';
 
 export async function downloadBackup() {
   const json = await exportBackup();
@@ -28,7 +28,7 @@ export function readJsonFile(file) {
 }
 
 function AutoBackupCard() {
-  const run = useAction(), toast = useToast();
+  const run = useAction();
   const { status, folderName, lastAuto, refresh } = useBackupFolder();
   if (!autoBackupSupported()) return (
     <section className="card space-y-2 p-5 text-sm">
@@ -36,14 +36,12 @@ function AutoBackupCard() {
       <p className="text-muted">Este navegador não permite gravar numa pasta automaticamente (só Chrome e Edge têm esse recurso). Por isso o app mostra um lembrete no topo quando o último backup passar de 7 dias.</p>
     </section>
   );
-  const pick = async () => {
-    try { await chooseFolder(); refresh(); toast('Pasta escolhida. Primeiro backup gravado.'); }
-    catch (e) { if (e?.name !== 'AbortError') toast(e?.message || 'Não consegui usar essa pasta.', { type: 'error' }); } // AbortError = você cancelou a janela
-  };
+  const pick = usePickFolder(refresh);
   return (
     <section className="card space-y-3 p-5">
       <h2 className="flex items-center gap-2 font-bold"><FolderSync size={18} className="text-good" /> Backup automático</h2>
       <p className="text-sm text-muted">Escolha uma pasta do computador (ex.: Documentos ou uma pasta sincronizada com Google Drive/OneDrive). A cada alteração, o app grava <code>backup-controle-aportes-AAAA-MM-DD.json</code> nela: um arquivo por dia, mantendo os 30 mais recentes.</p>
+      <p className="text-xs text-faint">Dica: crie antes uma subpasta, como <code>Documentos\Backup Aportes</code>. O Chrome não deixa escolher Documentos, Área de Trabalho ou Downloads diretamente ("contém arquivos do sistema").</p>
       {status === 'off' && <button onClick={pick} className="btn-primary">Escolher pasta…</button>}
       {status === 'granted' && <Notice tone="good" icon={ShieldCheck}>Ativo na pasta <strong>{folderName}</strong>.{lastAuto && <> Último backup automático: {new Date(lastAuto).toLocaleString('pt-BR')}.</>}</Notice>}
       {status === 'prompt' && <Notice tone="info" icon={FolderSync}>Pausado: por segurança, o navegador pede confirmação cada vez que o app é aberto. Clique em "Reativar".</Notice>}

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useState } from 'react';
-import { CheckCircle2, AlertTriangle, X } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Info, X } from 'lucide-react';
 
 // Avisos rápidos no canto da tela (sucesso, erro e "Desfazer").
 const ToastContext = createContext(null);
@@ -18,7 +18,7 @@ export function ToastProvider({ children }) {
       <div className="pointer-events-none fixed bottom-20 right-4 z-[60] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2 lg:bottom-4">
         {items.map(t => (
           <div key={t.id} className="card pointer-events-auto flex items-center gap-3 p-3 shadow-xl">
-            {t.type === 'error' ? <AlertTriangle size={18} className="shrink-0 text-bad" /> : <CheckCircle2 size={18} className="shrink-0 text-good" />}
+            {t.type === 'error' ? <AlertTriangle size={18} className="shrink-0 text-bad" /> : t.type === 'info' ? <Info size={18} className="shrink-0 text-info" /> : <CheckCircle2 size={18} className="shrink-0 text-good" />}
             <span className="flex-1 text-sm">{t.message}</span>
             {t.action && <button className="text-sm font-semibold text-accent" onClick={() => { t.action.onClick(); dismiss(t.id); }}>{t.action.label}</button>}
             <button onClick={() => dismiss(t.id)} className="text-faint hover:text-ink" aria-label="Fechar aviso"><X size={16} /></button>
