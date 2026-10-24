@@ -11,17 +11,17 @@ describe('taxa efetiva', () => {
 describe('saldo com juros compostos diários', () => {
   const bucket = { rate_history: [{ rate: 10, start_date: '2025-01-01' }] };
   it('R$ 1.000 a 10% a.a. por 365 dias', () => {
-    const r = realBalance(bucket, [{ date: '2025-01-01', amount: 1000 }], new Date('2026-01-01'));
+    const r = realBalance(bucket, [{ date: '2025-01-01', amount: 1000 }], '2026-01-01');
     expect(r.balance).toBe(round(1000 * Math.pow(1 + 0.1 / 365, 365)));
     expect(r.contributed).toBe(1000);
   });
   it('saque reduz o saldo na data em que acontece', () => {
-    const r = realBalance(bucket, [{ date: '2025-01-01', amount: 1000 }, { date: '2025-01-01', amount: -400 }], new Date('2025-01-01'));
+    const r = realBalance(bucket, [{ date: '2025-01-01', amount: 1000 }, { date: '2025-01-01', amount: -400 }], '2025-01-01');
     expect(r.balance).toBe(600);
   });
   it('mudança de taxa só vale a partir da data', () => {
     const b = { rate_history: [{ rate: 0, start_date: '2025-01-01' }, { rate: 36.5, start_date: '2025-01-11' }] };
-    const r = realBalance(b, [{ date: '2025-01-01', amount: 100 }], new Date('2025-01-12'));
+    const r = realBalance(b, [{ date: '2025-01-01', amount: 100 }], '2025-01-12');
     expect(r.balance).toBe(round(100 * 1.001)); // 10 dias a 0% + 1 dia a 0,1%/dia
   });
   it('saques em bucket de dólar viram reais pela cotação', () => {
@@ -33,7 +33,7 @@ describe('saldo com juros compostos diários', () => {
 describe('bucket em dólar', () => {
   it('separa rendimento e variação cambial', () => {
     const b = { rate_history: [{ rate: 0, start_date: '2025-01-01' }] };
-    const r = dollarRealBalance(b, [{ date: '2025-01-01', amount: 500, dollar_rate: 5 }], 5.5, new Date('2025-06-01'));
+    const r = dollarRealBalance(b, [{ date: '2025-01-01', amount: 500, dollar_rate: 5 }], 5.5, '2025-06-01');
     expect(r.usdBalance).toBe(100);
     expect(r.balance).toBe(550);
     expect(r.exchange).toBe(50);

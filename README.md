@@ -1,5 +1,7 @@
 # Controle de Aportes
 
+[![Testes](https://github.com/abnersf23-cmd/controle-de-aportes/actions/workflows/testes.yml/badge.svg)](https://github.com/abnersf23-cmd/controle-de-aportes/actions/workflows/testes.yml)
+
 Aplicativo web para organizar **aportes mensais, investimentos e gastos pessoais**, funcionando
 **100% no navegador e offline**: os dados ficam no próprio computador (IndexedDB), sem login e
 sem servidor na nuvem.
@@ -128,6 +130,10 @@ repositório.
 ```bash
 npm test
 ```
+
+Os testes também rodam sozinhos no GitHub Actions a cada push
+([`.github/workflows/testes.yml`](.github/workflows/testes.yml)), duas vezes: no fuso UTC e no
+fuso de Brasília, para pegar erros de data que só aparecem em um deles.
 
 26 testes automáticos cobrindo:
 
