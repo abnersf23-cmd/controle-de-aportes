@@ -172,6 +172,15 @@ export function bucketBalance(bucket, records, extras, withdrawals, asOf = new D
   return bucket.rate_type === 'fed' ? dollarRealBalance(bucket, contribs, bucket.current_dollar_rate || 1, asOf) : realBalance(bucket, contribs, asOf);
 }
 
+// Separa os buckets da tela inicial em visíveis e ocultos. Um bucket fica oculto
+// quando o saldo é zero, a não ser que você esteja distribuindo um aporte (total > 0)
+// e ele tenha percentual — aí ele aparece para você poder marcar o aporte nele.
+export function splitZeroBuckets(items = [], total = 0) {
+  const isZero = ({ bal }) => Math.abs(bal?.balance || 0) < 0.005;
+  const keep = item => !isZero(item) || (total > 0 && Number(item.b.percentage) > 0);
+  return { visible: items.filter(keep), hidden: items.filter(i => !keep(i)) };
+}
+
 // ---------- Projeção ----------
 export const monthlyEquivalent = annual => (Math.pow(1 + (Number(annual) || 0) / 100, 1 / 12) - 1) * 100;
 export function projectionData(buckets, monthly, months = 12) {
