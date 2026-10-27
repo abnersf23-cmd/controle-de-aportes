@@ -18,7 +18,10 @@ db.version(1).stores({
   settings: 'key'                  // configurações e cache (ex.: últimas cotações)
 });
 
-export const TABLES = ['buckets', 'records', 'extras', 'withdrawals', 'goals', 'stocks', 'expenses'];
+// Versão 2: contas fixas (entram sozinhas em todos os meses da planilha de gastos).
+db.version(2).stores({ fixed: 'id' });
+
+export const TABLES = ['buckets', 'records', 'extras', 'withdrawals', 'goals', 'stocks', 'expenses', 'fixed'];
 
 export const newId = () => (globalThis.crypto?.randomUUID ? crypto.randomUUID() : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`);
 export const stamp = () => new Date().toISOString();

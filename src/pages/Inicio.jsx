@@ -4,6 +4,9 @@ import BucketCard from '@/components/cards/BucketCard';
 import CategoryCard from '@/components/cards/CategoryCard';
 import StockBucketCard from '@/components/cards/StockBucketCard';
 import GoalCard from '@/components/cards/GoalCard';
+import AssistantCard from '@/components/cards/AssistantCard';
+import ReserveCard from '@/components/cards/ReserveCard';
+import useAssistant from '@/hooks/useAssistant';
 import MonthlySummary from '@/components/cards/MonthlySummary';
 import DistributionChart from '@/components/charts/DistributionChart';
 import PieCard from '@/components/charts/PieCard';
@@ -22,6 +25,7 @@ const titles = { extra: 'Aporte avulso', withdraw: 'Registrar saque ou gasto', r
 export default function Inicio({ data, goTo }) {
   const { buckets, records, extras, withdrawals, stocks, quotes, goals } = data;
   const run = useAction();
+  const assistant = useAssistant();
   const [input, setInput] = useState('');
   const [total, setTotal] = useState(0);
   const [modal, setModal] = useState(null); // { kind, bucket }
@@ -85,6 +89,11 @@ export default function Inicio({ data, goTo }) {
           <Stat icon={monthOut > 0 ? TrendingDown : Wallet} iconTone={monthOut > 0 ? 'text-bad' : 'text-info'} label="Aporte do mês" value={brl(total)} hint={monthOut > 0 ? `${brl(monthOut)} em saques/gastos este mês` : 'Nenhum saque este mês'} />
         </div>
       </section>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <AssistantCard assistant={assistant} buckets={buckets} goTo={goTo} onUse={v => { setInput(String(v)); setTotal(v); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+        <ReserveCard assistant={assistant} balances={balances} />
+      </div>
 
       {cashItem && <div className="grid gap-4 md:grid-cols-2">{renderBucket(cashItem)}<MonthlySummary buckets={trading} records={records} extras={extras} withdrawals={withdrawals} stocks={stocks} /></div>}
 

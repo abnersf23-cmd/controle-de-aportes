@@ -28,10 +28,10 @@ e não mostrava quanto cada parte realmente rendeu. O app responde a três pergu
 
 | Aba | O que faz |
 |---|---|
-| **Início** | Divide o valor que sobrou entre os "buckets" pela porcentagem de cada um, patrimônio total, rendimento, meta e gráficos de distribuição |
+| **Início** | Divide o valor que sobrou entre os "buckets" pela porcentagem de cada um, assistente que sugere quanto aportar da sobra do mês, meta da reserva de emergência, patrimônio total, rendimento, meta e gráficos |
 | **FIIs e Ações** | Compra e venda, preço médio, cotação automática (Yahoo Finance), dividendos recebidos e calendário de dividendos |
 | **Saques e gastos** | Histórico com filtro, gráfico por categoria e exportação CSV |
-| **Gastos mensais** | Planilha por quinzena (dia 15 e dia 30) com "duplicar mês" para até 12 meses |
+| **Gastos mensais** | Planilha por quinzena (dia 15 e dia 30) com "duplicar mês" para até 12 meses contas fixas (📌) que se repetem sozinhas, parcelas com fim e marcação de contas pagas |
 | **Relatório** | Lançamentos por dia, semana ou mês, evolução do patrimônio e CSV |
 | **Projeção** | Simulação de 1, 2 ou 5 anos com as taxas atuais de cada bucket |
 | **Gerenciar ativos** | Buckets, taxas (CDI, Selic, Fed, personalizada), bucket protegido e rebalanceamento automático para 100% |
