@@ -95,4 +95,12 @@ describe('contas fixas', () => {
     expect(fixedEnd(await db.fixed.get(fid))).toBeNull();
     await expect(setParcels(fid, '2027-01', { parcels: 3, current: 5 })).rejects.toThrow();
   });
+  it('categoria da linha fixada vai junto para os meses seguintes', async () => {
+    const net = { id: 'i', name: 'Internet', vale: 150, pagamento: 0, category: 'assinaturas' };
+    await db.expenses.bulkAdd([{ id: 'a', month: '2026-12', items: [net] }, { id: 'b', month: '2027-01', items: [] }]);
+    const fid = await pinItem('2026-12', net);
+    expect((await db.expenses.get('b')).items[0].category).toBe('assinaturas');
+    await updatePinned('2026-12', { ...net, fixed_id: fid, category: 'outros' });
+    expect((await db.expenses.get('b')).items[0].category).toBe('outros');
+  });
 });

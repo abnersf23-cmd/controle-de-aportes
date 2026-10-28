@@ -39,7 +39,7 @@ export async function duplicateExpenses(source, targets, { incomes = true, mode 
 
 // Aceita também o formato antigo ({ day: 15 | 30, value }).
 const fixedValues = f => ({ vale: Number(f.vale ?? (f.day === 15 ? f.value : 0)) || 0, pagamento: Number(f.pagamento ?? (f.day === 30 ? f.value : 0)) || 0 });
-const toItem = f => ({ id: newId(), name: f.name, ...fixedValues(f), fixed_id: f.id });
+const toItem = f => ({ id: newId(), name: f.name, ...fixedValues(f), ...(f.category ? { category: f.category } : {}), fixed_id: f.id });
 const keepPaid = i => ({ ...(i.paid_15 ? { paid_15: true } : {}), ...(i.paid_30 ? { paid_30: true } : {}) });
 
 // Parcelas: `first` é o mês da parcela 1 e `parcels` o total. Sem `parcels`, a conta não tem fim.
@@ -66,7 +66,7 @@ const later = month => db.expenses.where('month').above(month).toArray();
 
 // Fixa a linha `item` do mês `month`: ela passa a se repetir de `month` em diante.
 export async function pinItem(month, item) {
-  const f = { id: newId(), created_date: stamp(), name: String(item.name || '').trim(), vale: Number(item.vale) || 0, pagamento: Number(item.pagamento) || 0, start: month };
+  const f = { id: newId(), created_date: stamp(), name: String(item.name || '').trim(), vale: Number(item.vale) || 0, pagamento: Number(item.pagamento) || 0, ...(item.category ? { category: item.category } : {}), start: month };
   if (!f.name) throw new Error('Dê um nome para a conta antes de fixar.');
   if (!f.vale && !f.pagamento) throw new Error('Coloque o valor da conta antes de fixar.');
   await db.transaction('rw', db.fixed, db.expenses, async () => {
@@ -85,9 +85,9 @@ export async function pinItem(month, item) {
 export async function updatePinned(month, item) {
   const f = await db.fixed.get(item.fixed_id);
   if (!f) return;
-  const next = { ...f, name: String(item.name || '').trim() || f.name, vale: Number(item.vale) || 0, pagamento: Number(item.pagamento) || 0 };
+  const next = { ...f, name: String(item.name || '').trim() || f.name, vale: Number(item.vale) || 0, pagamento: Number(item.pagamento) || 0, ...(item.category ? { category: item.category } : {}) };
   const old = fixedValues(f);
-  if (next.name === f.name && next.vale === old.vale && next.pagamento === old.pagamento && f.vale !== undefined) return;
+  if (next.name === f.name && next.vale === old.vale && next.pagamento === old.pagamento && next.category === f.category && f.vale !== undefined) return;
   await db.transaction('rw', db.fixed, db.expenses, async () => {
     await db.fixed.put(next);
     for (const r of await later(month)) {

@@ -9,10 +9,11 @@ import { db, newId } from '@/db/database';
 import { applyFixed, fixedEnd, freshCopy, parcelNumber } from '@/db/expenses';
 import { addMonths, monthKey } from '@/lib/dates';
 import { brl, monthLabel, round } from '@/lib/finance';
+import { CATEGORIES, categoryOf, learnedCategories, totalsByCategory } from '@/lib/categories';
 
 const empty = { income_15: '', income_30: '', items: [], fixed_applied: [] };
 // fixed_id marca a linha que veio de uma conta fixa; fixed_applied lista as contas fixas que o mês já recebeu.
-const toPayload = d => ({ income_15: Number(d.income_15) || 0, income_30: Number(d.income_30) || 0, fixed_applied: d.fixed_applied || [], items: (d.items || []).map(i => ({ id: i.id, name: i.name || '', vale: Number(i.vale) || 0, pagamento: Number(i.pagamento) || 0, ...(i.fixed_id ? { fixed_id: i.fixed_id } : {}), ...(i.paid_15 ? { paid_15: true } : {}), ...(i.paid_30 ? { paid_30: true } : {}) })) });
+const toPayload = d => ({ income_15: Number(d.income_15) || 0, income_30: Number(d.income_30) || 0, fixed_applied: d.fixed_applied || [], items: (d.items || []).map(i => ({ id: i.id, name: i.name || '', vale: Number(i.vale) || 0, pagamento: Number(i.pagamento) || 0, ...(i.category ? { category: i.category } : {}), ...(i.fixed_id ? { fixed_id: i.fixed_id } : {}), ...(i.paid_15 ? { paid_15: true } : {}), ...(i.paid_30 ? { paid_30: true } : {}) })) });
 
 // Valor da conta num dia + botão para marcar como pago (só aparece se tiver valor).
 function PayCell({ value, paid, onChange, onBlur, onToggle }) {
@@ -86,6 +87,13 @@ export default function GastosMensais() {
   // O que ainda falta pagar em cada dia (contas com valor e sem o ✓).
   const falta15 = round(data.items.reduce((s, i) => s + (i.paid_15 ? 0 : Number(i.vale) || 0), 0));
   const falta30 = round(data.items.reduce((s, i) => s + (i.paid_30 ? 0 : Number(i.pagamento) || 0), 0));
+  // Categoria: a escolhida na linha, ou aprendida pelo nome em outros meses, ou sugerida por palavra-chave.
+  const learned = useMemo(() => learnedCategories(records), [records]);
+  const byCategory = totalsByCategory(data.items, learned);
+  const setCategory = (i, category) => {
+    persist({ ...data, items: data.items.map(x => (x.id === i.id ? { ...x, category } : x)) });
+    if (i.fixed_id) run(() => updatePinned(month, { ...i, category }));
+  };
   const togglePaid = (id, key) => persist({ ...data, items: data.items.map(i => (i.id === id ? { ...i, [key]: !i[key] } : i)) });
   const isDone = i => (Number(i.vale) > 0 || Number(i.pagamento) > 0) && (!(Number(i.vale) > 0) || i.paid_15) && (!(Number(i.pagamento) > 0) || i.paid_30);
 
@@ -116,18 +124,19 @@ export default function GastosMensais() {
             <label className="label">Entrada dia 30 (pagamento)<input type="number" step="0.01" value={data.income_30} onChange={e => setData(d => ({ ...d, income_30: e.target.value }))} onBlur={commit} className="field" placeholder="0,00" /></label>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[480px] text-sm">
-              <thead><tr className="text-left text-xs text-muted"><th className="p-3">Dívida / conta</th><th className="w-40 p-3">Dia 15</th><th className="w-40 p-3">Dia 30</th><th className="w-10" /></tr></thead>
+            <table className="w-full min-w-[680px] text-sm">
+              <thead><tr className="text-left text-xs text-muted"><th className="min-w-[200px] p-3">Dívida / conta</th><th className="w-36 p-3">Categoria</th><th className="w-36 p-3">Dia 15</th><th className="w-36 p-3">Dia 30</th><th className="w-10" /></tr></thead>
               <tbody>
                 {data.items.map(i => (
                   <tr key={i.id} className={`border-t border-line transition ${isDone(i) ? 'opacity-60' : ''}`}>
                     <td className="p-2"><div className="flex items-center gap-1"><button onClick={() => togglePin(i)} className={`btn-ghost shrink-0 p-1.5 ${i.fixed_id ? 'text-accent' : 'text-faint'}`} aria-pressed={!!i.fixed_id} aria-label={i.fixed_id ? 'Conta fixa (clique para tirar o pin)' : 'Fixar: repetir nos próximos meses'} title={i.fixed_id ? 'Conta fixa: se repete todo mês' : 'Fixar: repetir nos próximos meses'}><Pin size={16} className={i.fixed_id ? 'fill-current' : ''} /></button><input value={i.name} onChange={e => updateItem(i.id, { name: e.target.value })} onBlur={() => commitRow(i)} placeholder="Ex.: Internet" className="field mt-0" />{i.fixed_id && <ParcelChip f={fixed.find(f => f.id === i.fixed_id)} month={month} onClick={setParcelFor} />}</div></td>
+                    <td className="p-2"><select value={categoryOf(i, learned)} onChange={e => setCategory(i, e.target.value)} className={`field mt-0 py-2 text-xs ${i.category ? '' : 'text-muted'}`} aria-label={`Categoria de ${i.name || 'conta'}`} title={i.category ? '' : 'Sugerida automaticamente'}>{CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}</select></td>
                     <td className="p-2"><PayCell value={i.vale} paid={i.paid_15} onChange={e => updateItem(i.id, { vale: e.target.value })} onBlur={() => commitRow(i)} onToggle={() => togglePaid(i.id, 'paid_15')} /></td>
                     <td className="p-2"><PayCell value={i.pagamento} paid={i.paid_30} onChange={e => updateItem(i.id, { pagamento: e.target.value })} onBlur={() => commitRow(i)} onToggle={() => togglePaid(i.id, 'paid_30')} /></td>
                     <td className="p-2"><button onClick={() => persist({ ...data, items: data.items.filter(x => x.id !== i.id) })} className="btn-ghost p-2 hover:text-bad" aria-label="Remover linha"><Trash2 size={16} /></button></td>
                   </tr>
                 ))}
-                <tr className="border-t border-line bg-surface2 font-semibold"><td className="p-3">Total</td><td className="p-3">{brl(totalVale)}</td><td className="p-3">{brl(totalPag)}</td><td /></tr>
+                <tr className="border-t border-line bg-surface2 font-semibold"><td className="p-3">Total</td><td /><td className="p-3">{brl(totalVale)}</td><td className="p-3">{brl(totalPag)}</td><td /></tr>
               </tbody>
             </table>
           </div>
@@ -142,6 +151,11 @@ export default function GastosMensais() {
             <p className="text-2xl font-bold">{brl(totalVale + totalPag)}</p>
             <div className="space-y-2 border-t border-line pt-2"><Row label="Dia 15 (vale)" value={brl(totalVale)} /><Row label="Dia 30 (pagamento)" value={brl(totalPag)} /></div>
           </section>
+          {byCategory.length > 0 && <section className="card space-y-3 p-5">
+            <p className="text-xs font-bold uppercase tracking-wider text-muted">Por categoria</p>
+            <div className="flex h-3 overflow-hidden rounded-full bg-surface2">{byCategory.map(c => <div key={c.id} style={{ width: `${c.pct}%`, background: c.color }} title={c.label} />)}</div>
+            <ul className="space-y-1.5 text-sm">{byCategory.map(c => <li key={c.id} className="flex items-center gap-2"><span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: c.color }} /><span className="flex-1 text-muted">{c.label}</span><strong>{brl(c.value)}</strong><span className="w-10 text-right text-xs text-faint">{Math.round(c.pct)}%</span></li>)}</ul>
+          </section>}
           <section className="card space-y-2 p-5">
             <p className="text-xs font-bold uppercase tracking-wider text-muted">Falta pagar</p>
             <Row label="Dia 15" value={falta15 || !totalVale ? brl(falta15) : 'Tudo pago ✓'} />
