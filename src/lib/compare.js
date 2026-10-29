@@ -8,20 +8,22 @@
 //  - Ações: dividendos isentos; 15% sobre o lucro na venda (isento se vender até R$ 20 mil no mês).
 // Os proventos de FIIs e ações são reinvestidos. Taxa de custódia da B3 no Tesouro: 0,2% ao ano
 // sobre o que passar de R$ 10 mil (Tesouro Selic).
-import { irRate } from './debt';
+import { daysOf, irRate } from './debt';
 import { pct, round } from './finance';
 
 const grow = (rate, years) => Math.pow(1 + (Number(rate) || 0) / 100, years);
 
 function fixedIncome(amount, annual, years, months, taxFree) {
   const gross = amount * grow(annual, years);
-  const tax = taxFree ? 0 : ((gross - amount) * irRate(months * 30)) / 100;
+  const tax = taxFree ? 0 : ((gross - amount) * irRate(daysOf(months))) / 100;
   return { gross, tax };
 }
-function variableIncome(amount, dy, growth, years, taxPct) {
+// `exemptUpTo`: ações vendidas até R$ 20 mil no mês não pagam IR sobre o lucro.
+function variableIncome(amount, dy, growth, years, taxPct, exemptUpTo = 0) {
   const basis = amount * grow(dy, years); // cada provento reinvestido vira custo de compra
   const gross = basis * grow(growth, years);
-  return { gross, tax: (Math.max(0, gross - basis) * taxPct) / 100 };
+  const tax = gross <= exemptUpTo ? 0 : (Math.max(0, gross - basis) * taxPct) / 100;
+  return { gross, tax };
 }
 
 export function compareInvestments({ amount, months, selic, cdi, cdbPct = 100, lciPct = 90, fiiDy = 10, fiiGrowth = 0, stockDy = 6, stockGrowth = 5 }) {
@@ -35,14 +37,14 @@ export function compareInvestments({ amount, months, selic, cdi, cdbPct = 100, l
       label: 'Tesouro Selic',
       rate: (Number(selic) || 0) - custody,
       ...fixedIncome(A, (Number(selic) || 0) - custody, y, m, false),
-      note: `IR de ${pct(irRate(m * 30))}`
+      note: `IR de ${pct(irRate(daysOf(m)))}`
     },
     {
       id: 'cdb',
       label: `CDB ${cdbPct}% do CDI`,
       rate: (cdi * cdbPct) / 100,
       ...fixedIncome(A, (cdi * cdbPct) / 100, y, m, false),
-      note: `IR de ${pct(irRate(m * 30))}`
+      note: `IR de ${pct(irRate(daysOf(m)))}`
     },
     { id: 'lci', label: `LCI/LCA ${lciPct}% do CDI`, rate: (cdi * lciPct) / 100, ...fixedIncome(A, (cdi * lciPct) / 100, y, m, true), note: 'Isenta de IR' },
     {
@@ -56,8 +58,8 @@ export function compareInvestments({ amount, months, selic, cdi, cdbPct = 100, l
       id: 'acoes',
       label: 'Ações',
       rate: (1 + stockDy / 100) * (1 + stockGrowth / 100) * 100 - 100,
-      ...variableIncome(A, stockDy, stockGrowth, y, 15),
-      note: 'Dividendos isentos; 15% sobre o lucro na venda'
+      ...variableIncome(A, stockDy, stockGrowth, y, 15, 20000),
+      note: 'Dividendos isentos; lucro isento se vender até R$ 20 mil no mês'
     }
   ];
   return rows

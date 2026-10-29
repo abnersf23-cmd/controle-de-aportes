@@ -35,7 +35,7 @@ e não mostrava quanto cada parte realmente rendeu. O app responde a três pergu
 | **Relatório** | Lançamentos por dia, semana ou mês, evolução do patrimônio e CSV |
 | **Fechamento do mês** | Resumo do mês comparado com o anterior: entradas, contas e sobra, gastos por categoria contra o orçamento, aportes previsto x realizado, saques e variação do patrimônio. Botão **Imprimir / PDF** |
 | **Projeção** | Simulação de 1 a 10 anos a partir do patrimônio atual, **descontando a inflação** (IPCA do Banco Central) e **metas de R$ 10 mil, 100 mil, 500 mil e 1 milhão** |
-| **Simuladores** | **Antecipar parcelas** (juros economizados antecipando ou quitando, e se vale mais antecipar ou investir), **consignado** (parcela, CET, IOF e margem do salário), **aposentadoria** (quanto juntar com a regra dos 4%) e **comparador** Tesouro x CDB x LCI x FIIs x ações já sem o IR |
+| **Simuladores** | **Antecipar parcelas** (juros economizados antecipando ou quitando, e se vale mais antecipar ou investir), **consignado** (parcela, CET, IOF e margem do salário), **aposentadoria** (quanto juntar com a regra dos 4%) e **onde investir** (Tesouro x CDB x LCI x FIIs x ações já sem o IR). Cada um pede só 2 ou 3 coisas e responde numa frase; o resto fica em *Ajustar detalhes* |
 | **Gerenciar ativos** | Buckets, taxas (CDI, Selic, Fed, personalizada), bucket protegido e rebalanceamento automático para 100% |
 | **Backup** | Exportar/restaurar `.json` (dados **e configurações**), **backup com senha** (AES-256) e backup automático diário numa pasta escolhida |
 
@@ -65,7 +65,7 @@ celular), confirmação antes de excluir e botão "Desfazer".
 | Estilo | **Tailwind CSS** | Tema claro/escuro com variáveis CSS (*design tokens*) |
 | Dados | **IndexedDB** via **Dexie** | Banco que já vem no navegador: funciona offline e os dados não saem do computador |
 | Reatividade | `dexie-react-hooks` (`useLiveQuery`) | A tela atualiza sozinha quando o banco muda |
-| Gráficos | **Recharts** | Linha e área com estilo único em `charts/theme.js`; composição da carteira como barra empilhada (mais fácil de comparar que pizza) |
+| Gráficos | **Recharts** | Linha e área com estilo único em `charts/theme.js`; composição da carteira em rosca com o total no meio |
 | Ícones | **lucide-react** | |
 | Testes | **Vitest** + `fake-indexeddb` | Testa cálculos e banco sem abrir navegador |
 | Testes de interface | **Playwright** | Abre o app no Chromium e testa os fluxos como um usuário |
@@ -159,7 +159,7 @@ Os testes também rodam sozinhos no GitHub Actions a cada push
 fuso de Brasília, para pegar erros de data que só aparecem em um deles), os de interface no Chromium
 e um job de qualidade que roda o ESLint e confere a formatação do Prettier.
 
-**118 testes de lógica** (Vitest) cobrindo:
+**120 testes de lógica** (Vitest) cobrindo:
 
 - juros compostos diários e troca de taxa no meio do período;
 - conversão e rendimento em dólar;
@@ -178,9 +178,9 @@ e um job de qualidade que roda o ESLint e confere a formatação do Prettier.
 - juros economizados ao antecipar ou quitar, consignado (Price, CET e IOF), aposentadoria e comparador de investimentos com IR;
 - dividend yield por ativo, patrimônio líquido, resumo da planilha e busca rápida.
 
-**11 testes de interface** (Playwright, em [`e2e/`](e2e)) que abrem o app e clicam como um usuário:
+**13 testes de interface** (Playwright, em [`e2e/`](e2e)) que abrem o app e clicam como um usuário:
 plano de aportes, aviso de Selic nova, orçamento estourado, simulador de parcelas, projeção com metas, fechamento do mês, backup com senha,
-busca com Ctrl+K, abas do Início, aposentadoria e comparador.
+busca com Ctrl+K, abas do Início, antecipar parcelas (com e sem juros), aposentadoria, onde investir e patrimônio líquido.
 As respostas do Banco Central e do Yahoo são simuladas, então os testes não dependem da internet.
 
 ## Estrutura do código

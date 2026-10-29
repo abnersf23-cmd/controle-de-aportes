@@ -45,8 +45,8 @@ const TABS = [
 ];
 const PIES = [
   { value: 'tudo', label: 'Tudo' },
-  { value: 'fixa', label: 'Renda fixa' },
-  { value: 'variavel', label: 'Renda variável' }
+  { value: 'fixa', label: 'Fixa' },
+  { value: 'variavel', label: 'Variável' }
 ];
 
 const titles = {
@@ -285,7 +285,7 @@ export default function Inicio({ data, goTo }) {
             )}
           </section>
 
-          <div className="grid items-start gap-4 lg:grid-cols-[1.4fr_1fr]">
+          <div className="grid items-start gap-4 lg:grid-cols-[1.3fr_1fr]">
             <CompositionCard {...pies[pie]} plan={pie === 'tudo' ? planPct : undefined}>
               <Segmented value={pie} onChange={setPie} options={PIES} />
             </CompositionCard>

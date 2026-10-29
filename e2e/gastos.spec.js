@@ -33,17 +33,23 @@ test('orçamento por categoria avisa no Início e saldo do mês é projetado', a
   await expect(cash.getByText('Sobra no fim do mês').locator('..')).toContainText('R$ 2.840,00');
 });
 
-test('simulador: com juros de 3% ao mês, antecipar vale mais que investir a 12% ao ano', async ({ page }) => {
+test('simulador: com juros de 3% ao mês, quitar 12 parcelas de R$ 300 economiza R$ 613,80 e vale mais que investir', async ({ page }) => {
   await startFresh(page);
   await goTo(page, 'simuladores/antecipar');
-  await page.getByRole('button', { name: 'Simular outra dívida' }).click();
-  const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Valor da parcela (R$)').fill('300');
-  await dialog.getByLabel('Parcelas que faltam').fill('12');
-  await dialog.getByLabel('Quantas antecipar').fill('12');
-  await dialog.getByLabel('Juros do contrato (% ao mês)').fill('3');
-  await dialog.getByLabel('Rendimento do investimento (% ao ano)').fill('12');
-  await expect(dialog.getByText('Antecipando 12 parcelas')).toBeVisible();
-  await expect(dialog.getByText('Quitando tudo')).toBeVisible();
-  await expect(dialog.getByText(/Antecipar\s*deixa você com/)).toBeVisible();
+  await page.getByLabel('Valor da parcela (R$)').fill('300');
+  await page.getByLabel('Quantas parcelas ainda faltam?').fill('12');
+  await page.getByLabel('Juros do contrato (% ao mês)').fill('3');
+  await page.getByText('Ajustar detalhes (opcional)').click();
+  await page.getByLabel('Quanto seu dinheiro rende investido (% ao ano)').fill('12');
+  await expect(page.getByText('Quitando hoje, você economiza R$ 613,80')).toBeVisible();
+  await expect(page.getByText(/E vale mais que investir/)).toBeVisible();
+});
+
+test('simulador: compra parcelada sem juros não vale antecipar', async ({ page }) => {
+  await startFresh(page);
+  await goTo(page, 'simuladores/antecipar');
+  await page.getByLabel('Valor da parcela (R$)').fill('100');
+  await page.getByLabel('Quantas parcelas ainda faltam?').fill('5');
+  await page.getByLabel('Juros do contrato (% ao mês)').fill('0');
+  await expect(page.getByText('Sem juros: não vale antecipar')).toBeVisible();
 });

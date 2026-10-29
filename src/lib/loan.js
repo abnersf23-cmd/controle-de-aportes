@@ -1,5 +1,6 @@
 // Empréstimo consignado: parcela pela tabela Price, custo total, margem e CET. Funções puras.
 import { round } from './finance';
+import { daysOf } from './debt';
 
 // Parcela fixa (tabela Price) de um empréstimo de `principal` a `rate`% ao mês por `months` meses.
 export function pricePayment(principal, rate, months) {
@@ -27,7 +28,7 @@ export function effectiveMonthlyRate(received, payment, months) {
 
 // IOF de empréstimo para pessoa física: 0,38% fixo + 0,0082% ao dia (no máximo 365 dias).
 // O banco cobra o diário sobre cada parcela de amortização; aqui é uma estimativa por cima.
-export const estimateIof = (amount, months) => round((Number(amount) || 0) * (0.0038 + 0.000082 * Math.min(365, (Number(months) || 0) * 30)));
+export const estimateIof = (amount, months) => round((Number(amount) || 0) * (0.0038 + 0.000082 * Math.min(365, daysOf(months))));
 
 export function simulateConsigned({ amount, rate, months, salary, marginPct = 35, otherConsigned = 0, fees, currentRate }) {
   const A = Number(amount) || 0,

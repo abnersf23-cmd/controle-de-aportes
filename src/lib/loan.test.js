@@ -12,7 +12,7 @@ describe('consignado', () => {
     expect(round(effectiveMonthlyRate(10000, pricePayment(10000, 2, 12), 12))).toBe(2);
   });
   it('IOF estimado: 0,38% + 0,0082% ao dia, até 365 dias', () => {
-    expect(estimateIof(10000, 6)).toBe(185.6); // 0,38% + 180 dias × 0,0082% = 1,856%
+    expect(estimateIof(10000, 6)).toBe(188.06); // 0,38% + 183 dias × 0,0082% = 1,8806%
     expect(estimateIof(10000, 48)).toBe(337.3); // limite de 365 dias
   });
   it('avisa quando a parcela passa da margem de 35% do salário', () => {
