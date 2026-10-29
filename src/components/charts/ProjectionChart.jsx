@@ -20,18 +20,38 @@ export default function ProjectionChart({ data, showReal = false }) {
     <section className="card p-5">
       <h3 className="font-bold">Crescimento projetado</h3>
       <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-        {series.map(s => <li key={s.key} className="flex items-center gap-1.5 text-muted"><i className="h-0.5 w-4 rounded" style={{ background: s.color }} />{s.label}: <strong className="text-ink">{brl(last[s.key])}</strong></li>)}
+        {series.map(s => (
+          <li key={s.key} className="flex items-center gap-1.5 text-muted">
+            <i className="h-0.5 w-4 rounded" style={{ background: s.color }} />
+            {s.label}: <strong className="text-ink">{brl(last[s.key])}</strong>
+          </li>
+        ))}
       </ul>
       <div className="mt-3 h-72">
         <ResponsiveContainer>
           <ComposedChart data={rows} margin={{ left: 0, right: 8, top: 8 }}>
-            <defs><linearGradient id="proj" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="rgb(var(--accent))" stopOpacity={0.18} /><stop offset="100%" stopColor="rgb(var(--accent))" stopOpacity={0} /></linearGradient></defs>
+            <defs>
+              <linearGradient id="proj" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgb(var(--accent))" stopOpacity={0.18} />
+                <stop offset="100%" stopColor="rgb(var(--accent))" stopOpacity={0} />
+              </linearGradient>
+            </defs>
             <CartesianGrid {...gridProps} />
             <XAxis dataKey="n" tickFormatter={tick} {...axisProps} interval={rows.length > 24 ? 11 : rows.length > 12 ? 5 : 2} />
             <YAxis tickFormatter={compactBrl} {...axisProps} width={84} />
             <Tooltip {...tooltipProps} labelFormatter={n => tick(n)} formatter={(v, name) => [brl(v), SERIES.find(s => s.key === name)?.label || name]} />
             <Area type="monotone" dataKey="Total" stroke="rgb(var(--accent))" strokeWidth={2} fill="url(#proj)" activeDot={activeDot('rgb(var(--accent))')} />
-            {showReal && <Line type="monotone" dataKey="Total em valor de hoje" stroke="rgb(var(--info))" strokeWidth={2} strokeDasharray="6 4" dot={false} activeDot={activeDot('rgb(var(--info))')} />}
+            {showReal && (
+              <Line
+                type="monotone"
+                dataKey="Total em valor de hoje"
+                stroke="rgb(var(--info))"
+                strokeWidth={2}
+                strokeDasharray="6 4"
+                dot={false}
+                activeDot={activeDot('rgb(var(--info))')}
+              />
+            )}
             <Line type="monotone" dataKey="Você aportou" stroke="rgb(var(--faint))" strokeWidth={2} dot={false} activeDot={activeDot('rgb(var(--faint))')} />
           </ComposedChart>
         </ResponsiveContainer>

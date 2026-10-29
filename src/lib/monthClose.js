@@ -15,7 +15,10 @@ export const hasExpenseData = r => !!r && ((r.items || []).some(i => String(i.na
 // "closed" é o mapa { '2026-09': { reportAt } } salvo nas configurações.
 export function pendingReports(records, closed = {}, now = new Date()) {
   const current = monthKey(now);
-  return records.filter(r => r.month < current && hasExpenseData(r) && !closed[r.month]).map(r => r.month).sort();
+  return records
+    .filter(r => r.month < current && hasExpenseData(r) && !closed[r.month])
+    .map(r => r.month)
+    .sort();
 }
 
 // Um mês passado fica oculto quando:
@@ -32,15 +35,27 @@ export function isArchived(month, { records = [], closed = {}, now = new Date() 
 
 // Números do mês, os mesmos que a tela mostra.
 export function expenseSummary(record = {}) {
-  const items = (record.items || []).filter(i => String(i.name || '').trim()).map(i => ({ name: i.name.trim(), vale: Number(i.vale) || 0, pagamento: Number(i.pagamento) || 0 }));
-  const in15 = Number(record.income_15) || 0, in30 = Number(record.income_30) || 0;
+  const items = (record.items || [])
+    .filter(i => String(i.name || '').trim())
+    .map(i => ({ name: i.name.trim(), vale: Number(i.vale) || 0, pagamento: Number(i.pagamento) || 0 }));
+  const in15 = Number(record.income_15) || 0,
+    in30 = Number(record.income_30) || 0;
   const totalVale = round(items.reduce((s, i) => s + i.vale, 0));
   const totalPag = round(items.reduce((s, i) => s + i.pagamento, 0));
-  const total = round(totalVale + totalPag), income = round(in15 + in30);
+  const total = round(totalVale + totalPag),
+    income = round(in15 + in30);
   return {
-    items, in15, in30, totalVale, totalPag, total, income,
-    resta15: round(in15 - totalVale), resta30: round(in30 - totalPag), resta: round(income - total),
-    comprometido: income > 0 ? Math.round(total / income * 100) : null
+    items,
+    in15,
+    in30,
+    totalVale,
+    totalPag,
+    total,
+    income,
+    resta15: round(in15 - totalVale),
+    resta30: round(in30 - totalPag),
+    resta: round(income - total),
+    comprometido: income > 0 ? Math.round((total / income) * 100) : null
   };
 }
 
@@ -51,17 +66,21 @@ const num = v => v.toFixed(2).replace('.', ',');
 export function reportCsv(record) {
   const s = expenseSummary(record);
   const rows = s.items.map(i => [i.name, num(i.vale), num(i.pagamento), num(round(i.vale + i.pagamento))]);
-  rows.push([], ['Total', num(s.totalVale), num(s.totalPag), num(s.total)],
+  rows.push(
+    [],
+    ['Total', num(s.totalVale), num(s.totalPag), num(s.total)],
     ['Entradas', num(s.in15), num(s.in30), num(s.income)],
-    ['O que sobra', num(s.resta15), num(s.resta30), num(s.resta)]);
+    ['O que sobra', num(s.resta15), num(s.resta30), num(s.resta)]
+  );
   return toCsv(['Conta', 'Dia 15 (vale)', 'Dia 30 (pagamento)', 'Total'], rows);
 }
 
 // O nome da conta é texto digitado: escapar evita que um "<" quebre (ou injete algo no) HTML.
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 export function reportHtml(record, generatedAt = new Date()) {
-  const s = expenseSummary(record), title = `Gastos de ${monthLabel(record.month)}`;
+  const s = expenseSummary(record),
+    title = `Gastos de ${monthLabel(record.month)}`;
   const money = (v, color) => `<td class="n${color && v < 0 ? ' bad' : ''}">${brl(v)}</td>`;
   const rows = s.items.map(i => `<tr><td>${esc(i.name)}</td>${money(i.vale)}${money(i.pagamento)}${money(round(i.vale + i.pagamento))}</tr>`).join('');
   return `<!doctype html>

@@ -10,9 +10,14 @@
 export const ENCRYPTED_FORMAT = 'controle-aportes-backup-criptografado';
 export const MIN_PASSWORD = 8;
 const ITERATIONS = 310000;
-const enc = new TextEncoder(), dec = new TextDecoder();
+const enc = new TextEncoder(),
+  dec = new TextDecoder();
 
-const toB64 = bytes => { let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000)); return btoa(s); };
+const toB64 = bytes => {
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+};
 const fromB64 = text => Uint8Array.from(atob(text), c => c.charCodeAt(0));
 
 async function deriveKey(password, salt, iterations) {
@@ -28,7 +33,13 @@ export async function encryptJson(value, password) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await deriveKey(password, salt, ITERATIONS);
   const data = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(JSON.stringify(value))));
-  return { format: ENCRYPTED_FORMAT, version: 1, kdf: { name: 'PBKDF2', hash: 'SHA-256', iterations: ITERATIONS, salt: toB64(salt) }, cipher: { name: 'AES-GCM', iv: toB64(iv) }, data: toB64(data) };
+  return {
+    format: ENCRYPTED_FORMAT,
+    version: 1,
+    kdf: { name: 'PBKDF2', hash: 'SHA-256', iterations: ITERATIONS, salt: toB64(salt) },
+    cipher: { name: 'AES-GCM', iv: toB64(iv) },
+    data: toB64(data)
+  };
 }
 
 export async function decryptJson(file, password) {

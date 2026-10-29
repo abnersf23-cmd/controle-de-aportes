@@ -6,7 +6,11 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Controle de Aportes</title>
     <script>
-      try { if ((localStorage.getItem('tema') || 'escuro') === 'escuro') document.documentElement.classList.add('dark'); } catch (e) { document.documentElement.classList.add('dark'); }
+      try {
+        if ((localStorage.getItem('tema') || 'escuro') === 'escuro') document.documentElement.classList.add('dark');
+      } catch (e) {
+        document.documentElement.classList.add('dark');
+      }
     </script>
   </head>
   <body>

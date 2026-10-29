@@ -10,12 +10,22 @@ export default function useMarketRates() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const refresh = useCallback(async () => {
-    setLoading(true); setError(null);
-    try { return await fetchMarketRates(); } catch (e) { setError(e.message); throw e; } finally { setLoading(false); }
+    setLoading(true);
+    setError(null);
+    try {
+      return await fetchMarketRates();
+    } catch (e) {
+      setError(e.message);
+      throw e;
+    } finally {
+      setLoading(false);
+    }
   }, []);
   const ready = rates !== undefined;
   // Confere uma vez, quando o banco termina de carregar (e não a cada taxa nova que chega).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { if (ready && ratesStale(rates)) refresh().catch(() => {}); }, [ready]);
+  useEffect(() => {
+    if (ready && ratesStale(rates)) refresh().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
   return { rates: rates || null, loading, error, refresh };
 }

@@ -9,7 +9,10 @@ test('orçamento por categoria avisa no Início e saldo do mês é projetado', a
   await page.getByLabel('Entrada dia 30 (pagamento)').fill('2000');
   await page.getByLabel('Entrada dia 30 (pagamento)').blur();
   await page.getByRole('button', { name: 'Adicionar linha' }).click();
-  const row = page.getByRole('row').filter({ has: page.getByPlaceholder('Ex.: Internet') }).last();
+  const row = page
+    .getByRole('row')
+    .filter({ has: page.getByPlaceholder('Ex.: Internet') })
+    .last();
   await row.getByPlaceholder('Ex.: Internet').fill('Netflix');
   await row.getByPlaceholder('Ex.: Internet').blur();
   await row.getByPlaceholder('0,00').nth(1).fill('160');

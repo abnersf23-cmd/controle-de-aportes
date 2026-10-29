@@ -9,13 +9,13 @@ export const db = new Dexie('controle-aportes');
 // Os demais campos são guardados normalmente, só não são indexados.
 db.version(1).stores({
   buckets: 'id, kind, created_date',
-  records: 'id, &month',          // MonthlyRecord: um por mês (& = único)
-  extras: 'id, bucket_id, date',   // ExtraContribution: aportes avulsos
+  records: 'id, &month', // MonthlyRecord: um por mês (& = único)
+  extras: 'id, bucket_id, date', // ExtraContribution: aportes avulsos
   withdrawals: 'id, bucket_id, date, type',
   goals: 'id',
   stocks: 'id, &ticker',
-  expenses: 'id, &month',          // MonthlyExpense: planilha de gastos
-  settings: 'key'                  // configurações e cache (ex.: últimas cotações)
+  expenses: 'id, &month', // MonthlyExpense: planilha de gastos
+  settings: 'key' // configurações e cache (ex.: últimas cotações)
 });
 
 // Versão 2: contas fixas (entram sozinhas em todos os meses da planilha de gastos).

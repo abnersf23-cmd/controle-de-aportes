@@ -7,13 +7,18 @@
 import { monthlyEquivalent, round } from './finance';
 
 // Imposto de renda regressivo da renda fixa (Tesouro, CDB): quanto mais tempo, menor.
-export const IR_TABLE = [[180, 22.5], [360, 20], [720, 17.5], [Infinity, 15]];
+export const IR_TABLE = [
+  [180, 22.5],
+  [360, 20],
+  [720, 17.5],
+  [Infinity, 15]
+];
 export const irRate = days => IR_TABLE.find(([limit]) => days <= limit)[1];
 
 // Valor investido por `months` meses, já descontando o IR sobre o ganho.
 export function investNet(amount, annualRate, months, taxFree = false) {
   const gross = amount * Math.pow(1 + monthlyEquivalent(annualRate) / 100, months);
-  const tax = taxFree || months <= 0 ? 0 : (gross - amount) * irRate(months * 30) / 100;
+  const tax = taxFree || months <= 0 ? 0 : ((gross - amount) * irRate(months * 30)) / 100;
   return gross - tax;
 }
 
@@ -23,10 +28,12 @@ export function investNet(amount, annualRate, months, taxFree = false) {
 //  - investir: o mesmo dinheiro que a antecipação custa hoje fica aplicado até lá;
 //  - antecipar: nos meses em que a parcela não vem mais, você aplica o valor dela até lá.
 export function simulateAnticipation({ parcel, remaining, count = remaining, debtRate, investRate, taxFree = false }) {
-  const P = Number(parcel) || 0, n = Math.max(0, Math.floor(Number(remaining) || 0));
+  const P = Number(parcel) || 0,
+    n = Math.max(0, Math.floor(Number(remaining) || 0));
   const k = Math.min(n, Math.max(0, Math.floor(Number(count) || 0)));
   const i = (Number(debtRate) || 0) / 100;
-  let cost = 0, anticipateFinal = 0;
+  let cost = 0,
+    anticipateFinal = 0;
   for (let t = n - k + 1; t <= n; t++) {
     cost += P / Math.pow(1 + i, t);
     anticipateFinal += investNet(P, investRate, n - t, taxFree);
@@ -35,8 +42,13 @@ export function simulateAnticipation({ parcel, remaining, count = remaining, deb
   const advantage = round(anticipateFinal - investFinal);
   const investNetMonthly = cost > 0 && n > 0 ? (Math.pow(investFinal / cost, 1 / n) - 1) * 100 : 0;
   return {
-    count: k, nominal: round(k * P), cost: round(cost), discount: round(k * P - cost),
-    investFinal: round(investFinal), anticipateFinal: round(anticipateFinal), advantage,
+    count: k,
+    nominal: round(k * P),
+    cost: round(cost),
+    discount: round(k * P - cost),
+    investFinal: round(investFinal),
+    anticipateFinal: round(anticipateFinal),
+    advantage,
     better: Math.abs(advantage) < 0.01 ? 'empate' : advantage > 0 ? 'antecipar' : 'investir',
     investNetMonthly: round(investNetMonthly * 100) / 100
   };
@@ -46,6 +58,7 @@ export function simulateAnticipation({ parcel, remaining, count = remaining, deb
 // e quanto deixaria quitando tudo hoje. É a diferença entre o valor das parcelas e o valor presente.
 export function interestSavings({ parcel, remaining, count = remaining, debtRate }) {
   const base = { parcel, remaining, debtRate, investRate: 0 };
-  const some = simulateAnticipation({ ...base, count }), all = simulateAnticipation({ ...base, count: remaining });
+  const some = simulateAnticipation({ ...base, count }),
+    all = simulateAnticipation({ ...base, count: remaining });
   return { anticipate: some.discount, anticipateCost: some.cost, payoff: all.discount, payoffCost: all.cost, totalLeft: all.nominal };
 }

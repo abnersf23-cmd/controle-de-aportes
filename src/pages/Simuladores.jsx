@@ -19,7 +19,11 @@ export const SIMULATORS = [
 
 // Todas as contas de "e se…?" num lugar só, separadas em abas.
 export default function Simuladores({ data }) {
-  const [tab, setTab] = useSubTab('simuladores', SIMULATORS.map(s => s.value), 'antecipar');
+  const [tab, setTab] = useSubTab(
+    'simuladores',
+    SIMULATORS.map(s => s.value),
+    'antecipar'
+  );
   const { fixed } = useExpenses();
   const { rates } = useMarketRates();
   const [plan] = useSetting('contributionPlan', PLAN_DEFAULTS);
@@ -28,8 +32,14 @@ export default function Simuladores({ data }) {
   return (
     <div className="space-y-5">
       <PageHeader title="Simuladores" subtitle={info.hint} />
-      <div className="overflow-x-auto pb-1"><Segmented value={tab} onChange={setTab} options={SIMULATORS} /></div>
-      {tab === 'antecipar' && <div className="max-w-2xl"><DebtSimulator fixed={fixed} month={monthKey()} /></div>}
+      <div className="overflow-x-auto pb-1">
+        <Segmented value={tab} onChange={setTab} options={SIMULATORS} />
+      </div>
+      {tab === 'antecipar' && (
+        <div className="max-w-2xl">
+          <DebtSimulator fixed={fixed} month={monthKey()} />
+        </div>
+      )}
       {tab === 'consignado' && <Consignado />}
       {tab === 'aposentadoria' && <Aposentadoria current={current} monthly={plan?.monthly ?? PLAN_DEFAULTS.monthly} />}
       {tab === 'comparador' && <Comparador rates={rates} />}

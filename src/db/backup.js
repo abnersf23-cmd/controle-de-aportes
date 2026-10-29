@@ -24,7 +24,15 @@ export const backupSettings = json => (json?.format === BACKUP_FORMAT && Array.i
 
 // Aceita o backup deste app e também o arquivo exportado do Base44
 // (que usa os nomes das entidades: Bucket, MonthlyRecord, ...).
-const BASE44_NAMES = { Bucket: 'buckets', MonthlyRecord: 'records', ExtraContribution: 'extras', Withdrawal: 'withdrawals', Goal: 'goals', Stock: 'stocks', MonthlyExpense: 'expenses' };
+const BASE44_NAMES = {
+  Bucket: 'buckets',
+  MonthlyRecord: 'records',
+  ExtraContribution: 'extras',
+  Withdrawal: 'withdrawals',
+  Goal: 'goals',
+  Stock: 'stocks',
+  MonthlyExpense: 'expenses'
+};
 
 export function normalizeBackup(json) {
   if (!json || typeof json !== 'object') throw new Error('Arquivo inválido.');

@@ -7,7 +7,12 @@ export default function useSubTab(page, options, fallback) {
   const read = () => {
     const [p, sub] = window.location.hash.slice(1).split('/');
     if (p === page && options.includes(sub)) return sub;
-    try { const saved = localStorage.getItem(key); if (options.includes(saved)) return saved; } catch { /* sem localStorage */ }
+    try {
+      const saved = localStorage.getItem(key);
+      if (options.includes(saved)) return saved;
+    } catch {
+      /* sem localStorage */
+    }
     return fallback;
   };
   const [sub, setSub] = useState(read);
@@ -19,7 +24,11 @@ export default function useSubTab(page, options, fallback) {
   }, []);
   const go = next => {
     window.history.replaceState(null, '', `#${page}/${next}`);
-    try { localStorage.setItem(key, next); } catch { /* sem localStorage */ }
+    try {
+      localStorage.setItem(key, next);
+    } catch {
+      /* sem localStorage */
+    }
     setSub(next);
   };
   return [sub, go];

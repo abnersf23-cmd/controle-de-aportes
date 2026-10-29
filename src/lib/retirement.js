@@ -9,7 +9,7 @@ import { goalProjection, monthlyEquivalent, round } from './finance';
 export function retirementPlan({ age, retireAge, income, current = 0, monthly = 0, realRate = 4, withdrawRate = 4 }) {
   const n = Math.max(0, Math.round(((Number(retireAge) || 0) - (Number(age) || 0)) * 12));
   const r = monthlyEquivalent(realRate) / 100;
-  const target = (Number(income) || 0) * 12 / ((Number(withdrawRate) || 4) / 100);
+  const target = ((Number(income) || 0) * 12) / ((Number(withdrawRate) || 4) / 100);
   const growth = Math.pow(1 + r, n);
   const annuity = r === 0 ? n : (growth - 1) / r;
   const fromCurrent = (Number(current) || 0) * growth;
@@ -17,8 +17,11 @@ export function retirementPlan({ age, retireAge, income, current = 0, monthly = 
   const reached = fromCurrent + (Number(monthly) || 0) * annuity;
   const months = goalProjection(Number(current) || 0, Number(monthly) || 0, realRate, target);
   return {
-    months: n, target: round(target), monthlyNeeded: round(needed), projected: round(reached),
-    incomeProjected: round(reached * ((Number(withdrawRate) || 4) / 100) / 12),
+    months: n,
+    target: round(target),
+    monthlyNeeded: round(needed),
+    projected: round(reached),
+    incomeProjected: round((reached * ((Number(withdrawRate) || 4) / 100)) / 12),
     ageReached: months == null ? null : round((Number(age) || 0) + months / 12)
   };
 }

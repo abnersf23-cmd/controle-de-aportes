@@ -1,12 +1,31 @@
 import { describe, expect, it } from 'vitest';
 import { monthClosing } from './closing';
 
-const buckets = [{ id: 'c', name: 'Cofrinho', percentage: 100, base_rate: 0, created_date: '2026-01-01', rate_history: [{ rate: 0, start_date: '2026-01-01' }] }];
-const expenses = [
-  { month: '2026-09', items: [{ name: 'Netflix', vale: 40, pagamento: 0 }, { name: 'Faculdade', pagamento: 400 }] },
-  { month: '2026-10', income_15: 1000, income_30: 2000, items: [{ name: 'Netflix', vale: 60, pagamento: 0, paid_15: true }, { name: 'Faculdade', pagamento: 400 }] }
+const buckets = [
+  { id: 'c', name: 'Cofrinho', percentage: 100, base_rate: 0, created_date: '2026-01-01', rate_history: [{ rate: 0, start_date: '2026-01-01' }] }
 ];
-const records = [{ month: '2026-09', allocations: [{ bucket_id: 'c', amount: 500 }] }, { month: '2026-10', allocations: [{ bucket_id: 'c', amount: 300 }] }];
+const expenses = [
+  {
+    month: '2026-09',
+    items: [
+      { name: 'Netflix', vale: 40, pagamento: 0 },
+      { name: 'Faculdade', pagamento: 400 }
+    ]
+  },
+  {
+    month: '2026-10',
+    income_15: 1000,
+    income_30: 2000,
+    items: [
+      { name: 'Netflix', vale: 60, pagamento: 0, paid_15: true },
+      { name: 'Faculdade', pagamento: 400 }
+    ]
+  }
+];
+const records = [
+  { month: '2026-09', allocations: [{ bucket_id: 'c', amount: 500 }] },
+  { month: '2026-10', allocations: [{ bucket_id: 'c', amount: 300 }] }
+];
 const withdrawals = [{ bucket_id: 'c', amount: 50, date: '2026-10-12' }];
 const now = new Date(2026, 10, 15);
 

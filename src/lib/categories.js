@@ -29,7 +29,9 @@ const KEYWORDS = [
 
 // Sugere pela palavra-chave (palavra inteira, ou começo de palavra para radicais como "suplement").
 export function guessCategory(name) {
-  const words = plain(name).split(/[^a-z0-9]+/).filter(Boolean);
+  const words = plain(name)
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
   for (const [id, keys] of KEYWORDS) if (keys.some(k => words.some(w => w === k || (k.length >= 5 && w.startsWith(k))))) return id;
   return null;
 }
@@ -51,10 +53,15 @@ export function totalsByCategory(items, learned = {}) {
   const totals = {};
   for (const i of items) {
     const v = (Number(i.vale) || 0) + (Number(i.pagamento) || 0);
-    if (v > 0) { const c = categoryOf(i, learned); totals[c] = round((totals[c] || 0) + v); }
+    if (v > 0) {
+      const c = categoryOf(i, learned);
+      totals[c] = round((totals[c] || 0) + v);
+    }
   }
   const sum = Object.values(totals).reduce((s, v) => s + v, 0);
-  return Object.entries(totals).map(([id, value]) => ({ ...categoryById(id), value, pct: sum ? (value / sum) * 100 : 0 })).sort((a, b) => b.value - a.value);
+  return Object.entries(totals)
+    .map(([id, value]) => ({ ...categoryById(id), value, pct: sum ? (value / sum) * 100 : 0 }))
+    .sort((a, b) => b.value - a.value);
 }
 
 // Orçamento: compara o total de cada categoria com o limite definido (em R$ por mês).
@@ -62,11 +69,13 @@ export function totalsByCategory(items, learned = {}) {
 export const BUDGET_WARN = 0.8;
 export function budgetStatus(byCategory = [], limits = {}) {
   const ids = new Set([...byCategory.map(c => c.id), ...Object.keys(limits).filter(id => Number(limits[id]) > 0)]);
-  return [...ids].map(id => {
-    const value = byCategory.find(c => c.id === id)?.value || 0;
-    const limit = Number(limits[id]) || 0;
-    const ratio = limit > 0 ? value / limit : null;
-    const level = limit > 0 ? (value > limit ? 'over' : ratio >= BUDGET_WARN ? 'warn' : 'ok') : null;
-    return { ...categoryById(id), value, limit, ratio, level, left: limit > 0 ? round(limit - value) : null };
-  }).sort((a, b) => (b.ratio ?? -1) - (a.ratio ?? -1) || b.value - a.value);
+  return [...ids]
+    .map(id => {
+      const value = byCategory.find(c => c.id === id)?.value || 0;
+      const limit = Number(limits[id]) || 0;
+      const ratio = limit > 0 ? value / limit : null;
+      const level = limit > 0 ? (value > limit ? 'over' : ratio >= BUDGET_WARN ? 'warn' : 'ok') : null;
+      return { ...categoryById(id), value, limit, ratio, level, left: limit > 0 ? round(limit - value) : null };
+    })
+    .sort((a, b) => (b.ratio ?? -1) - (a.ratio ?? -1) || b.value - a.value);
 }

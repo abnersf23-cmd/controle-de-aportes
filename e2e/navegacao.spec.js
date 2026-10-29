@@ -4,9 +4,12 @@ import { goTo, startFresh } from './helpers';
 test('Ctrl+K abre a busca e leva direto para um simulador', async ({ page }) => {
   await startFresh(page);
   await page.keyboard.press('Control+k');
+  await expect(page.getByRole('dialog', { name: 'Busca rápida' })).toBeVisible();
   const busca = page.getByRole('dialog', { name: 'Busca rápida' });
   await busca.getByLabel('Buscar').fill('aposent');
-  await page.keyboard.press('Enter');
+  // Espera o resultado aparecer selecionado antes do Enter (a lista filtra enquanto digita).
+  await expect(busca.getByRole('option', { selected: true })).toContainText('Aposentadoria');
+  await busca.getByLabel('Buscar').press('Enter');
   await expect(busca).toBeHidden();
   await expect(page).toHaveURL(/#simuladores\/aposentadoria$/);
   await expect(page.getByLabel('Sua idade')).toBeVisible();

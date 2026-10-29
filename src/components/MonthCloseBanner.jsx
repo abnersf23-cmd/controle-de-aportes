@@ -18,13 +18,35 @@ export default function MonthCloseBanner() {
   return (
     <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-info/30 bg-info/10 p-3 text-sm text-info">
       <FileText size={18} className="shrink-0" />
-      <span className="flex-1">O mês fechou: o relatório de gastos de <strong>{names}</strong> está pronto.{status === 'prompt' ? ' O navegador pede uma confirmação para salvar na pasta.' : ' Escolha uma pasta para ele ser salvo sozinho, ou baixe agora.'}</span>
-      {status === 'prompt'
-        ? <button className="btn-primary py-1.5" onClick={() => run(async () => { if (!(await reactivate())) throw new Error('Permissão não concedida.'); await saveReportsIfPossible(pending); refresh(); }, 'Relatório salvo na pasta.')}>Salvar relatório</button>
-        : <>
-            <button className="btn-primary py-1.5" onClick={() => run(() => downloadReports(pending), 'Relatório baixado (HTML e CSV).')}>Baixar relatório</button>
-            {autoBackupSupported() && <button className="btn-ghost py-1.5" onClick={pick}>Escolher pasta</button>}
-          </>}
+      <span className="flex-1">
+        O mês fechou: o relatório de gastos de <strong>{names}</strong> está pronto.
+        {status === 'prompt' ? ' O navegador pede uma confirmação para salvar na pasta.' : ' Escolha uma pasta para ele ser salvo sozinho, ou baixe agora.'}
+      </span>
+      {status === 'prompt' ? (
+        <button
+          className="btn-primary py-1.5"
+          onClick={() =>
+            run(async () => {
+              if (!(await reactivate())) throw new Error('Permissão não concedida.');
+              await saveReportsIfPossible(pending);
+              refresh();
+            }, 'Relatório salvo na pasta.')
+          }
+        >
+          Salvar relatório
+        </button>
+      ) : (
+        <>
+          <button className="btn-primary py-1.5" onClick={() => run(() => downloadReports(pending), 'Relatório baixado (HTML e CSV).')}>
+            Baixar relatório
+          </button>
+          {autoBackupSupported() && (
+            <button className="btn-ghost py-1.5" onClick={pick}>
+              Escolher pasta
+            </button>
+          )}
+        </>
+      )}
     </div>
   );
 }

@@ -3,7 +3,16 @@ process.env.TZ = 'America/Sao_Paulo';
 import { describe, expect, it } from 'vitest';
 import { expenseSummary, isArchived, pendingReports, reportCsv, reportHtml } from './monthClose';
 
-const set = { month: '2026-09', income_15: 1000, income_30: 2000, items: [{ name: 'Internet', vale: 100, pagamento: 0 }, { name: 'Aluguel', vale: 0, pagamento: 1500 }, { name: '', vale: 0, pagamento: 0 }] };
+const set = {
+  month: '2026-09',
+  income_15: 1000,
+  income_30: 2000,
+  items: [
+    { name: 'Internet', vale: 100, pagamento: 0 },
+    { name: 'Aluguel', vale: 0, pagamento: 1500 },
+    { name: '', vale: 0, pagamento: 0 }
+  ]
+};
 const out = { month: '2026-10', income_15: 1000, items: [{ name: 'Internet', vale: 100 }] };
 const records = [set, out];
 const at = (y, m, d, h = 9) => new Date(y, m - 1, d, h);

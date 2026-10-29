@@ -23,7 +23,8 @@ describe('comparador de investimentos', () => {
   const base = { amount: 10000, months: 24, selic: 15, cdi: 14.9 };
   it('LCI isenta a 90% do CDI vs CDB 100% com IR de 17,5% (2 anos)', () => {
     const rows = compareInvestments({ ...base, months: 24 });
-    const cdb = rows.find(r => r.id === 'cdb'), lci = rows.find(r => r.id === 'lci');
+    const cdb = rows.find(r => r.id === 'cdb'),
+      lci = rows.find(r => r.id === 'lci');
     expect(cdb.note).toBe('IR de 17,5%');
     expect(lci.tax).toBe(0);
     expect(rows[0].net).toBeGreaterThanOrEqual(rows[rows.length - 1].net);

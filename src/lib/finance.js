@@ -57,7 +57,10 @@ export function rebalanceForAdd(buckets, percentage) {
   const editable = buckets.filter(bucket => !bucket.protected);
   const total = editable.reduce((sum, bucket) => sum + bucket.percentage, 0);
   if (percentage <= 0 || percentage >= total) throw new Error('O percentual deve ser menor que o total disponível nos buckets não protegidos.');
-  const adjusted = closeToTarget(editable.map(bucket => ({ ...bucket, percentage: bucket.percentage * (total - percentage) / total })), total - percentage);
+  const adjusted = closeToTarget(
+    editable.map(bucket => ({ ...bucket, percentage: (bucket.percentage * (total - percentage)) / total })),
+    total - percentage
+  );
   return buckets.map(bucket => (bucket.protected ? bucket : adjusted.find(item => item.id === bucket.id)));
 }
 export function rebalanceForDelete(buckets, removed) {
@@ -65,7 +68,10 @@ export function rebalanceForDelete(buckets, removed) {
   const editable = remaining.filter(bucket => !bucket.protected);
   const total = editable.reduce((sum, bucket) => sum + bucket.percentage, 0);
   if (!editable.length) throw new Error('Mantenha ao menos um bucket não protegido.');
-  const adjusted = closeToTarget(editable.map(bucket => ({ ...bucket, percentage: bucket.percentage + removed.percentage * bucket.percentage / total })), total + removed.percentage);
+  const adjusted = closeToTarget(
+    editable.map(bucket => ({ ...bucket, percentage: bucket.percentage + (removed.percentage * bucket.percentage) / total })),
+    total + removed.percentage
+  );
   return remaining.map(bucket => (bucket.protected ? bucket : adjusted.find(item => item.id === bucket.id)));
 }
 // Muda o % de um bucket e redistribui a diferença proporcionalmente entre os outros.
@@ -74,8 +80,13 @@ export function rebalanceForEdit(buckets, id, target) {
   if (target <= 0 || target >= 100 || !others.length) throw new Error('Informe um percentual entre 0 e 100 e mantenha outros buckets para redistribuir.');
   const remainder = round(100 - target);
   const othersTotal = others.reduce((s, b) => s + Number(b.percentage), 0);
-  const adjusted = others.map(b => ({ id: b.id, percentage: round(othersTotal > 0 ? Number(b.percentage) * remainder / othersTotal : remainder / others.length) }));
-  adjusted[adjusted.length - 1].percentage = round(adjusted[adjusted.length - 1].percentage + round(remainder - adjusted.reduce((s, b) => s + b.percentage, 0)));
+  const adjusted = others.map(b => ({
+    id: b.id,
+    percentage: round(othersTotal > 0 ? (Number(b.percentage) * remainder) / othersTotal : remainder / others.length)
+  }));
+  adjusted[adjusted.length - 1].percentage = round(
+    adjusted[adjusted.length - 1].percentage + round(remainder - adjusted.reduce((s, b) => s + b.percentage, 0))
+  );
   return adjusted;
 }
 
@@ -84,7 +95,7 @@ export function effectiveRate(bucket = {}) {
   const type = bucket.rate_type || 'custom';
   const base = Number(bucket.base_rate || 0);
   if (type === 'fed') return round(Math.max(0, base - Number(bucket.management_fee ?? 0.4)));
-  if (type === 'cdi') return round(base * Number(bucket.cdi_percentage ?? 100) / 100);
+  if (type === 'cdi') return round((base * Number(bucket.cdi_percentage ?? 100)) / 100);
   return round(base);
 }
 export function rateHistory(bucket = {}) {
@@ -97,7 +108,9 @@ export function rateHistory(bucket = {}) {
 // ---------- Saldos dos buckets ----------
 // Junta aportes mensais, avulsos e saques (negativos) de um bucket, em ordem de data.
 export function bucketContributions(bucketId, records = [], extras = [], withdrawals = []) {
-  const monthly = records.flatMap(r => (r.allocations || []).filter(a => a.bucket_id === bucketId).map(a => ({ date: `${r.month}-01`, amount: Number(a.amount) || 0, dollar_rate: a.dollar_rate })));
+  const monthly = records.flatMap(r =>
+    (r.allocations || []).filter(a => a.bucket_id === bucketId).map(a => ({ date: `${r.month}-01`, amount: Number(a.amount) || 0, dollar_rate: a.dollar_rate }))
+  );
   const avulsos = extras.filter(e => e.bucket_id === bucketId).map(e => ({ date: e.date, amount: Number(e.amount) || 0, dollar_rate: e.dollar_rate }));
   const saques = withdrawals.filter(w => w.bucket_id === bucketId).map(w => ({ date: w.date, amount: -withdrawalBrl(w), dollar_rate: w.dollar_rate }));
   return [...monthly, ...avulsos, ...saques].sort(byDate('date'));
@@ -111,16 +124,31 @@ export function realBalance(bucket, contributions = [], asOf = new Date()) {
   const contributed = round(contribs.reduce((sum, c) => sum + c.amount, 0));
   if (!contribs.length) return { balance: 0, contributed: 0, yield: 0 };
   const history = rateHistory(bucket);
-  const rateAt = d => { let rate = history[0].rate; for (const h of history) if (toDate(h.start_date) <= d) rate = h.rate; return rate; };
+  const rateAt = d => {
+    let rate = history[0].rate;
+    for (const h of history) if (toDate(h.start_date) <= d) rate = h.rate;
+    return rate;
+  };
   const events = new Set([asOfDate.getTime()]);
   contribs.forEach(c => events.add(c.date.getTime()));
-  history.forEach(h => { const d = toDate(h.start_date); if (d <= asOfDate) events.add(d.getTime()); });
+  history.forEach(h => {
+    const d = toDate(h.start_date);
+    if (d <= asOfDate) events.add(d.getTime());
+  });
   const sorted = [...events].sort((a, b) => a - b);
-  let balance = 0, prev = null;
+  let balance = 0,
+    prev = null;
   for (const t of sorted) {
     const cur = new Date(t);
-    if (prev) { const days = daysBetween(prev, cur); if (days > 0) balance *= Math.pow(1 + rateAt(prev) / 100 / 365, days); }
-    contribs.filter(c => c.date.getTime() === t).forEach(c => { balance += c.amount; });
+    if (prev) {
+      const days = daysBetween(prev, cur);
+      if (days > 0) balance *= Math.pow(1 + rateAt(prev) / 100 / 365, days);
+    }
+    contribs
+      .filter(c => c.date.getTime() === t)
+      .forEach(c => {
+        balance += c.amount;
+      });
     prev = cur;
   }
   return { balance: round(balance), contributed, yield: round(balance - contributed) };
@@ -131,10 +159,14 @@ function compoundWithHistory(principal, startDate, endDate, history) {
   let balance = principal;
   const sorted = [...history].sort(byDate('start_date'));
   const points = [startDate];
-  for (const h of sorted) { const d = toDate(h.start_date); if (d > startDate && d < endDate) points.push(d); }
+  for (const h of sorted) {
+    const d = toDate(h.start_date);
+    if (d > startDate && d < endDate) points.push(d);
+  }
   points.push(endDate);
   for (let i = 0; i < points.length - 1; i++) {
-    const from = points[i], to = points[i + 1];
+    const from = points[i],
+      to = points[i + 1];
     const days = daysBetween(from, to);
     if (days > 0) {
       let rate = sorted[0].rate;
@@ -154,7 +186,10 @@ export function dollarRealBalance(bucket, contributions = [], currentRate, asOf 
   if (!contribs.length) return { balance: 0, contributed: 0, yield: 0, exchange: 0, usdBalance: 0, usdContributed: 0, usdYield: 0, usdExchange: 0 };
   const history = rateHistory(bucket);
   const rate = Number(currentRate) || contribs[0]?.dollar_rate || 1;
-  let usdBalance = 0, usdContributed = 0, yieldBRL = 0, exchangeBRL = 0;
+  let usdBalance = 0,
+    usdContributed = 0,
+    yieldBRL = 0,
+    exchangeBRL = 0;
   for (const c of contribs) {
     const entryRate = Number(c.dollar_rate) || rate;
     const usdAmount = Number(c.amount) / entryRate;
@@ -164,7 +199,16 @@ export function dollarRealBalance(bucket, contributions = [], currentRate, asOf 
     yieldBRL += (compoundedUSD - usdAmount) * entryRate;
     exchangeBRL += compoundedUSD * (rate - entryRate);
   }
-  return { balance: round(usdBalance * rate), contributed, yield: round(yieldBRL), exchange: round(exchangeBRL), usdBalance: round(usdBalance), usdContributed: round(usdContributed), usdYield: round(usdBalance - usdContributed), usdExchange: round(exchangeBRL / rate) };
+  return {
+    balance: round(usdBalance * rate),
+    contributed,
+    yield: round(yieldBRL),
+    exchange: round(exchangeBRL),
+    usdBalance: round(usdBalance),
+    usdContributed: round(usdContributed),
+    usdYield: round(usdBalance - usdContributed),
+    usdExchange: round(exchangeBRL / rate)
+  };
 }
 
 export function bucketBalance(bucket, records, extras, withdrawals, asOf = new Date()) {
@@ -199,7 +243,7 @@ export function projectionData(buckets, monthly, months = 12, { start = {}, rate
     const row = { month: `Mês ${index + 1}` };
     buckets.forEach(bucket => {
       const mRate = monthlyEquivalent(rates[bucket.id] ?? effectiveRate(bucket));
-      balances[bucket.id] = (balances[bucket.id] + monthly * bucket.percentage / 100) * (1 + mRate / 100);
+      balances[bucket.id] = (balances[bucket.id] + (monthly * bucket.percentage) / 100) * (1 + mRate / 100);
       row[bucket.name] = round(balances[bucket.id]);
       if (bucket.rate_type === 'fed') row[`${bucket.name} (USD)`] = round(balances[bucket.id] / dollarRate);
     });
@@ -224,19 +268,26 @@ export function stockTotalAsOf(stocks = [], asOf = new Date()) {
   return round(stocks.reduce((sum, s) => sum + (s.contributions || []).filter(c => toDate(c.date) <= d).reduce((a, c) => a + signedAmount(c), 0), 0));
 }
 export function stockMonthTotal(stocks = [], month) {
-  return round(stocks.reduce((sum, s) => sum + (s.contributions || []).filter(c => (c.date || '').slice(0, 7) === month).reduce((a, c) => a + signedAmount(c), 0), 0));
+  return round(
+    stocks.reduce((sum, s) => sum + (s.contributions || []).filter(c => (c.date || '').slice(0, 7) === month).reduce((a, c) => a + signedAmount(c), 0), 0)
+  );
 }
 // Custo da posição atual pelo preço médio (vendas tiram custo proporcional).
 export function stockInvested(stock) {
   const items = [...(stock.contributions || [])].sort(byDate('date'));
-  let quantity = 0, cost = 0;
+  let quantity = 0,
+    cost = 0;
   for (const c of items) {
-    const qty = Number(c.quantity) || 0, amount = Number(c.amount) || 0;
+    const qty = Number(c.quantity) || 0,
+      amount = Number(c.amount) || 0;
     if (c.kind === 'sell') {
       const sold = Math.min(qty, quantity);
       cost -= quantity > 0 ? (cost / quantity) * sold : 0;
       quantity -= sold;
-    } else { quantity += qty; cost += amount; }
+    } else {
+      quantity += qty;
+      cost += amount;
+    }
   }
   return round(Math.max(0, cost));
 }
@@ -249,11 +300,13 @@ export function stockAveragePrice(stock) {
 }
 export function stockDividendsReceived(stock, dividendEvents = []) {
   const contribs = stock.contributions || [];
-  return round(dividendEvents.reduce((sum, ev) => {
-    const d = toDate(ev.date);
-    const held = contribs.filter(c => c.quantity && toDate(c.date) <= d).reduce((a, c) => a + signedQuantity(c), 0);
-    return sum + Math.max(0, held) * (Number(ev.amount) || 0);
-  }, 0));
+  return round(
+    dividendEvents.reduce((sum, ev) => {
+      const d = toDate(ev.date);
+      const held = contribs.filter(c => c.quantity && toDate(c.date) <= d).reduce((a, c) => a + signedQuantity(c), 0);
+      return sum + Math.max(0, held) * (Number(ev.amount) || 0);
+    }, 0)
+  );
 }
 export function stockMarketValue(stock, quote) {
   const q = stockQuantity(stock);
@@ -275,7 +328,8 @@ export function weightedAverageRate(buckets = [], rates = {}) {
 export function goalProjection(currentBalance, monthlyContribution, annualRate, target) {
   if (target <= 0 || currentBalance >= target) return 0;
   const mRate = monthlyEquivalent(annualRate) / 100;
-  let balance = currentBalance, months = 0;
+  let balance = currentBalance,
+    months = 0;
   while (balance < target && months < 600) {
     balance = balance * (1 + mRate) + (monthlyContribution || 0);
     months++;
@@ -288,7 +342,11 @@ export function goalProjection(currentBalance, monthlyContribution, annualRate, 
 export const MILESTONES = [10000, 100000, 500000, 1000000];
 export function milestones(currentBalance, monthly, annualRate, inflation = 0, targets = MILESTONES) {
   const real = realRate(annualRate, inflation);
-  return targets.map(target => ({ target, months: goalProjection(currentBalance, monthly, annualRate, target), monthsReal: goalProjection(currentBalance, monthly, real, target) }));
+  return targets.map(target => ({
+    target,
+    months: goalProjection(currentBalance, monthly, annualRate, target),
+    monthsReal: goalProjection(currentBalance, monthly, real, target)
+  }));
 }
 
 export function patrimonyEvolution(buckets, records, extras, withdrawals, stocks = []) {
@@ -297,7 +355,9 @@ export function patrimonyEvolution(buckets, records, extras, withdrawals, stocks
     ...extras.map(e => e.date),
     ...withdrawals.map(w => w.date),
     ...stocks.flatMap(s => (s.contributions || []).map(c => c.date))
-  ].filter(Boolean).sort();
+  ]
+    .filter(Boolean)
+    .sort();
   if (!allDates.length) return [];
   const start = toDate(`${allDates[0].slice(0, 7)}-01`);
   const now = new Date();
@@ -306,7 +366,10 @@ export function patrimonyEvolution(buckets, records, extras, withdrawals, stocks
   while (d <= now) {
     const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
     const asOf = monthEnd > now ? now : monthEnd;
-    points.push({ month: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, balance: round(totalBalance(buckets, records, extras, withdrawals, asOf, stocks)) });
+    points.push({
+      month: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+      balance: round(totalBalance(buckets, records, extras, withdrawals, asOf, stocks))
+    });
     d = new Date(d.getFullYear(), d.getMonth() + 1, 1);
   }
   return points;

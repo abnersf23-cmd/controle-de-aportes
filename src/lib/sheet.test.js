@@ -4,11 +4,27 @@ import { searchItems } from './search';
 
 describe('totais da planilha de gastos', () => {
   it('soma entradas, contas, o que falta pagar e o que sobra', () => {
-    const t = sheetTotals({ income_15: '1000', income_30: 2000, items: [
-      { vale: 300, pagamento: 0, paid_15: true },
-      { vale: '100', pagamento: 900 }
-    ] });
-    expect(t).toMatchObject({ income: 3000, bills15: 400, bills30: 900, bills: 1300, left15: 600, left30: 1100, leftover: 1700, open15: 100, open30: 900, paid: 300, committed: 43 });
+    const t = sheetTotals({
+      income_15: '1000',
+      income_30: 2000,
+      items: [
+        { vale: 300, pagamento: 0, paid_15: true },
+        { vale: '100', pagamento: 900 }
+      ]
+    });
+    expect(t).toMatchObject({
+      income: 3000,
+      bills15: 400,
+      bills30: 900,
+      bills: 1300,
+      left15: 600,
+      left30: 1100,
+      leftover: 1700,
+      open15: 100,
+      open30: 900,
+      paid: 300,
+      committed: 43
+    });
   });
   it('sem entradas, o % comprometido fica vazio', () => {
     expect(sheetTotals({ items: [] }).committed).toBeNull();

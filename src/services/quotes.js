@@ -4,7 +4,10 @@
 import { db } from '@/db/database';
 import { toDateKey } from '@/lib/dates';
 
-const cleanTicker = t => String(t).toUpperCase().replace(/[^A-Z0-9]/g, '');
+const cleanTicker = t =>
+  String(t)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
 
 async function fetchOne(ticker) {
   try {
@@ -30,7 +33,11 @@ export async function fetchQuotes(tickers) {
   const cached = (await db.settings.get('quotes'))?.value || {};
   const next = { ...cached };
   let ok = 0;
-  for (const q of results) if (!q.error && q.price != null) { next[q.ticker] = { ...q, fetched_at: Date.now() }; ok++; }
+  for (const q of results)
+    if (!q.error && q.price != null) {
+      next[q.ticker] = { ...q, fetched_at: Date.now() };
+      ok++;
+    }
   await db.settings.put({ key: 'quotes', value: next });
   if (ok) await db.settings.put({ key: 'quotesUpdatedAt', value: Date.now() });
   return { quotes: next, ok, failed: results.filter(q => q.error).map(q => q.ticker) };
