@@ -3,7 +3,12 @@ import { parseSgs, rateSuggestions, ratesStale } from './rates';
 
 describe('taxas do Banco Central', () => {
   it('lê a resposta da API SGS (último ponto, data no formato do app)', () => {
-    expect(parseSgs([{ data: '01/10/2026', valor: '14.90' }, { data: '28/10/2026', valor: '15.00' }])).toEqual({ value: 15, date: '2026-10-28' });
+    expect(
+      parseSgs([
+        { data: '01/10/2026', valor: '14.90' },
+        { data: '28/10/2026', valor: '15.00' }
+      ])
+    ).toEqual({ value: 15, date: '2026-10-28' });
     expect(parseSgs([{ data: '30/09/2026', valor: '4,56' }])).toEqual({ value: 4.56, date: '2026-09-30' });
   });
   it('recusa resposta estranha em vez de gravar número errado', () => {

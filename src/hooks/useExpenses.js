@@ -13,5 +13,15 @@ export default function useExpenses() {
   };
 
   const duplicate = duplicateExpenses;
-  return { records: records || [], fixed: fixed || [], loading: records === undefined || fixed === undefined, save, duplicate, pinItem, unpinItem, updatePinned, setParcels };
+  return {
+    records: records || [],
+    fixed: fixed || [],
+    loading: records === undefined || fixed === undefined,
+    save,
+    duplicate,
+    pinItem,
+    unpinItem,
+    updatePinned,
+    setParcels
+  };
 }

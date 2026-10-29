@@ -4,7 +4,7 @@ export function toCsv(headers, rows) {
     const s = String(v ?? '');
     return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  return `﻿${[headers, ...rows].map(r => r.map(escape).join(';')).join('\r\n')}`;
+  return `\uFEFF${[headers, ...rows].map(r => r.map(escape).join(';')).join('\r\n')}`;
 }
 
 export default function downloadCsv(filename, headers, rows) {

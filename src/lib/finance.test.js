@@ -1,6 +1,23 @@
 // Testes automáticos dos cálculos. Rode com: npm test
 import { describe, expect, it } from 'vitest';
-import { milestones, projectionData, realRate, bucketContributions, dollarRealBalance, effectiveRate, goalProjection, realBalance, rebalanceForAdd, rebalanceForDelete, rebalanceForEdit, stockInvested, stockQuantity, stockDividendsReceived, round, splitZeroBuckets } from './finance';
+import {
+  milestones,
+  projectionData,
+  realRate,
+  bucketContributions,
+  dollarRealBalance,
+  effectiveRate,
+  goalProjection,
+  realBalance,
+  rebalanceForAdd,
+  rebalanceForDelete,
+  rebalanceForEdit,
+  stockInvested,
+  stockQuantity,
+  stockDividendsReceived,
+  round,
+  splitZeroBuckets
+} from './finance';
 
 describe('taxa efetiva', () => {
   it('Selic usa a taxa base', () => expect(effectiveRate({ rate_type: 'selic', base_rate: 14.25 })).toBe(14.25));
@@ -16,11 +33,23 @@ describe('saldo com juros compostos diários', () => {
     expect(r.contributed).toBe(1000);
   });
   it('saque reduz o saldo na data em que acontece', () => {
-    const r = realBalance(bucket, [{ date: '2025-01-01', amount: 1000 }, { date: '2025-01-01', amount: -400 }], '2025-01-01');
+    const r = realBalance(
+      bucket,
+      [
+        { date: '2025-01-01', amount: 1000 },
+        { date: '2025-01-01', amount: -400 }
+      ],
+      '2025-01-01'
+    );
     expect(r.balance).toBe(600);
   });
   it('mudança de taxa só vale a partir da data', () => {
-    const b = { rate_history: [{ rate: 0, start_date: '2025-01-01' }, { rate: 36.5, start_date: '2025-01-11' }] };
+    const b = {
+      rate_history: [
+        { rate: 0, start_date: '2025-01-01' },
+        { rate: 36.5, start_date: '2025-01-11' }
+      ]
+    };
     const r = realBalance(b, [{ date: '2025-01-01', amount: 100 }], '2025-01-12');
     expect(r.balance).toBe(round(100 * 1.001)); // 10 dias a 0% + 1 dia a 0,1%/dia
   });
@@ -42,7 +71,11 @@ describe('bucket em dólar', () => {
 });
 
 describe('rebalanceamento', () => {
-  const buckets = [{ id: 'a', percentage: 40, protected: true }, { id: 'b', percentage: 30 }, { id: 'c', percentage: 30 }];
+  const buckets = [
+    { id: 'a', percentage: 40, protected: true },
+    { id: 'b', percentage: 30 },
+    { id: 'c', percentage: 30 }
+  ];
   const sum = list => round(list.reduce((s, b) => s + b.percentage, 0));
   it('novo bucket sai só dos não protegidos e soma continua 100', () => {
     const out = rebalanceForAdd(buckets, 10);
@@ -57,15 +90,22 @@ describe('rebalanceamento', () => {
 });
 
 describe('ações e FIIs', () => {
-  const stock = { contributions: [
-    { kind: 'buy', date: '2025-01-01', quantity: 10, amount: 100 },
-    { kind: 'buy', date: '2025-02-01', quantity: 10, amount: 120 },
-    { kind: 'sell', date: '2025-03-01', quantity: 5, amount: 70 }
-  ] };
+  const stock = {
+    contributions: [
+      { kind: 'buy', date: '2025-01-01', quantity: 10, amount: 100 },
+      { kind: 'buy', date: '2025-02-01', quantity: 10, amount: 120 },
+      { kind: 'sell', date: '2025-03-01', quantity: 5, amount: 70 }
+    ]
+  };
   it('quantidade considera vendas', () => expect(stockQuantity(stock)).toBe(15));
   it('custo usa preço médio', () => expect(stockInvested(stock)).toBe(165)); // 220 - 5 × 11
   it('dividendos usam as cotas que você tinha na data', () => {
-    expect(stockDividendsReceived(stock, [{ date: '2025-01-15', amount: 0.1 }, { date: '2025-03-15', amount: 0.1 }])).toBe(2.5);
+    expect(
+      stockDividendsReceived(stock, [
+        { date: '2025-01-15', amount: 0.1 },
+        { date: '2025-03-15', amount: 0.1 }
+      ])
+    ).toBe(2.5);
   });
 });
 

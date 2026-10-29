@@ -18,8 +18,16 @@ export default function BudgetAlert({ assistant, goTo }) {
   return (
     <Notice tone={over ? 'bad' : 'warn'} icon={AlertTriangle}>
       <strong>Orçamento do mês:</strong>{' '}
-      {alerts.map((c, i) => <span key={c.id}>{i > 0 && ' · '}{c.label} {c.level === 'over' ? `passou ${brl(-c.left)} do limite` : `já usou ${Math.round(c.ratio * 100)}% (resta ${brl(c.left)})`}</span>)}.{' '}
-      <button className="font-semibold underline" onClick={() => goTo('gastos')}>Ver gastos</button>
+      {alerts.map((c, i) => (
+        <span key={c.id}>
+          {i > 0 && ' · '}
+          {c.label} {c.level === 'over' ? `passou ${brl(-c.left)} do limite` : `já usou ${Math.round(c.ratio * 100)}% (resta ${brl(c.left)})`}
+        </span>
+      ))}
+      .{' '}
+      <button className="font-semibold underline" onClick={() => goTo('gastos')}>
+        Ver gastos
+      </button>
     </Notice>
   );
 }

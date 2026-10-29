@@ -3,7 +3,16 @@ import { averageMonthlyBills, monthCashflow, monthLeftover, reserveStatus, sugge
 
 describe('assistente de aporte', () => {
   it('calcula a sobra do mês pela planilha', () => {
-    expect(monthLeftover({ income_15: 1203.6, income_30: 770, items: [{ vale: 708, pagamento: 0 }, { vale: 0, pagamento: 660.49 }] })).toBe(605.11);
+    expect(
+      monthLeftover({
+        income_15: 1203.6,
+        income_30: 770,
+        items: [
+          { vale: 708, pagamento: 0 },
+          { vale: 0, pagamento: 660.49 }
+        ]
+      })
+    ).toBe(605.11);
   });
   it('deixa 20% (mínimo R$ 100) na conta e arredonda o aporte para baixo de 10 em 10', () => {
     expect(suggestContribution(605.11)).toEqual({ leftover: 605.11, keep: 125.11, contribution: 480 });

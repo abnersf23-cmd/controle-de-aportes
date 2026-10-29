@@ -4,9 +4,16 @@ import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const files = {};
-const fakeDir = (path) => ({
+const fakeDir = path => ({
   getDirectoryHandle: async name => fakeDir(`${path}${name}/`),
-  getFileHandle: async name => ({ createWritable: async () => ({ write: async c => { files[`${path}${name}`] = c; }, close: async () => {} }) })
+  getFileHandle: async name => ({
+    createWritable: async () => ({
+      write: async c => {
+        files[`${path}${name}`] = c;
+      },
+      close: async () => {}
+    })
+  })
 });
 let status = 'granted';
 vi.mock('./autoBackup', () => ({ getFolder: async () => fakeDir(''), folderStatus: async () => status }));
@@ -15,7 +22,12 @@ const { db } = await import('@/db/database');
 const { getClosed, saveReportsIfPossible } = await import('./monthReports');
 
 describe('salvar relatórios na pasta', () => {
-  beforeEach(async () => { await db.expenses.clear(); await db.settings.clear(); for (const k in files) delete files[k]; status = 'granted'; });
+  beforeEach(async () => {
+    await db.expenses.clear();
+    await db.settings.clear();
+    for (const k in files) delete files[k];
+    status = 'granted';
+  });
   it('grava HTML e CSV em Relatorios/ e marca o mês como fechado', async () => {
     await db.expenses.add({ id: '1', month: '2026-09', income_15: 100, items: [{ name: 'Luz', vale: 50 }] });
     expect(await saveReportsIfPossible(['2026-09'])).toEqual(['2026-09']);

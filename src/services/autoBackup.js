@@ -23,7 +23,11 @@ export async function getFolder() {
 export async function folderStatus() {
   const dir = await getFolder();
   if (!dir) return 'off';
-  try { return await dir.queryPermission({ mode: 'readwrite' }); } catch { return 'denied'; }
+  try {
+    return await dir.queryPermission({ mode: 'readwrite' });
+  } catch {
+    return 'denied';
+  }
 }
 
 export async function chooseFolder() {
@@ -52,7 +56,10 @@ export async function writeBackupToFolder(dir) {
   await writable.write(JSON.stringify(await exportBackup(), null, 2));
   await writable.close();
   const now = new Date().toISOString();
-  await db.settings.bulkPut([{ key: 'lastBackup', value: now }, { key: 'lastAutoBackup', value: now }]);
+  await db.settings.bulkPut([
+    { key: 'lastBackup', value: now },
+    { key: 'lastAutoBackup', value: now }
+  ]);
   await prune(dir);
 }
 

@@ -2,7 +2,9 @@ import { expect } from '@playwright/test';
 
 // Cada teste começa com um navegador limpo (IndexedDB vazio). Estas respostas falsas
 // substituem a internet: o teste não depende do Banco Central nem do Yahoo estarem no ar.
-export const SELIC = 15, CDI = 14.9, IPCA = 4.5;
+export const SELIC = 15,
+  CDI = 14.9,
+  IPCA = 4.5;
 
 export async function mockInternet(page) {
   const sgs = { 432: SELIC, 4389: CDI, 13522: IPCA };

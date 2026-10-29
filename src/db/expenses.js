@@ -22,8 +22,8 @@ export async function duplicateExpenses(source, targets, { incomes = true, mode 
         next = { items: [...(existing.items || []).filter(i => String(i.name || '').trim()), ...copies(items.filter(i => !names.has(norm(i.name))))] };
       }
       if (incomes || !existing) {
-        next.income_15 = incomes ? source.income_15 : existing?.income_15 ?? 0;
-        next.income_30 = incomes ? source.income_30 : existing?.income_30 ?? 0;
+        next.income_15 = incomes ? source.income_15 : (existing?.income_15 ?? 0);
+        next.income_30 = incomes ? source.income_30 : (existing?.income_30 ?? 0);
       }
       if (existing) await db.expenses.update(existing.id, next);
       else await db.expenses.add({ id: newId(), created_date: stamp(), month, ...next });
@@ -44,7 +44,8 @@ const keepPaid = i => ({ ...(i.paid_15 ? { paid_15: true } : {}), ...(i.paid_30 
 // Parcelas: `first` é o mês da parcela 1 e `parcels` o total. Sem `parcels`, a conta não tem fim.
 export const fixedEnd = f => (f?.parcels ? addMonths(f.first, f.parcels - 1) : null);
 export const parcelNumber = (f, month) => {
-  const [y1, m1] = f.first.split('-').map(Number), [y2, m2] = month.split('-').map(Number);
+  const [y1, m1] = f.first.split('-').map(Number),
+    [y2, m2] = month.split('-').map(Number);
   return (y2 - y1) * 12 + (m2 - m1) + 1;
 };
 const activeIn = (f, month) => f.start <= month && (!f.parcels || month <= fixedEnd(f));
@@ -65,13 +66,25 @@ const later = month => db.expenses.where('month').above(month).toArray();
 
 // Fixa a linha `item` do mês `month`: ela passa a se repetir de `month` em diante.
 export async function pinItem(month, item) {
-  const f = { id: newId(), created_date: stamp(), name: String(item.name || '').trim(), vale: Number(item.vale) || 0, pagamento: Number(item.pagamento) || 0, ...(item.category ? { category: item.category } : {}), start: month };
+  const f = {
+    id: newId(),
+    created_date: stamp(),
+    name: String(item.name || '').trim(),
+    vale: Number(item.vale) || 0,
+    pagamento: Number(item.pagamento) || 0,
+    ...(item.category ? { category: item.category } : {}),
+    start: month
+  };
   if (!f.name) throw new Error('Dê um nome para a conta antes de fixar.');
   if (!f.vale && !f.pagamento) throw new Error('Coloque o valor da conta antes de fixar.');
   await db.transaction('rw', db.fixed, db.expenses, async () => {
     await db.fixed.add(f);
     const cur = await db.expenses.where('month').equals(month).first();
-    if (cur) await db.expenses.update(cur.id, { items: (cur.items || []).map(i => (i.id === item.id ? { ...i, fixed_id: f.id } : i)), fixed_applied: [...(cur.fixed_applied || []), f.id] });
+    if (cur)
+      await db.expenses.update(cur.id, {
+        items: (cur.items || []).map(i => (i.id === item.id ? { ...i, fixed_id: f.id } : i)),
+        fixed_applied: [...(cur.fixed_applied || []), f.id]
+      });
     for (const r of await later(month)) {
       const next = applyFixed([f], r.month, r);
       if (next) await db.expenses.update(r.id, { items: next.items, fixed_applied: next.fixed_applied });
@@ -84,7 +97,13 @@ export async function pinItem(month, item) {
 export async function updatePinned(month, item) {
   const f = await db.fixed.get(item.fixed_id);
   if (!f) return;
-  const next = { ...f, name: String(item.name || '').trim() || f.name, vale: Number(item.vale) || 0, pagamento: Number(item.pagamento) || 0, ...(item.category ? { category: item.category } : {}) };
+  const next = {
+    ...f,
+    name: String(item.name || '').trim() || f.name,
+    vale: Number(item.vale) || 0,
+    pagamento: Number(item.pagamento) || 0,
+    ...(item.category ? { category: item.category } : {})
+  };
   const old = fixedValues(f);
   if (next.name === f.name && next.vale === old.vale && next.pagamento === old.pagamento && next.category === f.category && f.vale !== undefined) return;
   await db.transaction('rw', db.fixed, db.expenses, async () => {
@@ -101,9 +120,15 @@ export async function unpinItem(month, fixedId) {
   await db.transaction('rw', db.fixed, db.expenses, async () => {
     await db.fixed.delete(fixedId);
     const cur = await db.expenses.where('month').equals(month).first();
-    if (cur) await db.expenses.update(cur.id, { items: (cur.items || []).map(({ fixed_id, ...i }) => (fixed_id === fixedId ? i : { ...i, ...(fixed_id ? { fixed_id } : {}) })) });
+    if (cur)
+      await db.expenses.update(cur.id, {
+        items: (cur.items || []).map(({ fixed_id, ...i }) => (fixed_id === fixedId ? i : { ...i, ...(fixed_id ? { fixed_id } : {}) }))
+      });
     for (const r of await later(month)) {
-      await db.expenses.update(r.id, { items: (r.items || []).filter(i => i.fixed_id !== fixedId), fixed_applied: (r.fixed_applied || []).filter(x => x !== fixedId) });
+      await db.expenses.update(r.id, {
+        items: (r.items || []).filter(i => i.fixed_id !== fixedId),
+        fixed_applied: (r.fixed_applied || []).filter(x => x !== fixedId)
+      });
     }
   });
 }
@@ -111,7 +136,8 @@ export async function unpinItem(month, fixedId) {
 // Define quantas parcelas a conta fixa tem. `current` é o número da parcela em `month`.
 // Sem `parcels`, volta a ser uma conta sem fim. Depois da última parcela, a linha sai dos meses seguintes.
 export async function setParcels(fixedId, month, { parcels, current = 1 }) {
-  const total = Math.floor(Number(parcels)) || 0, now = Math.floor(Number(current)) || 1;
+  const total = Math.floor(Number(parcels)) || 0,
+    now = Math.floor(Number(current)) || 1;
   if (total && (now < 1 || now > total)) throw new Error(`A parcela deste mês precisa estar entre 1 e ${total}.`);
   await db.transaction('rw', db.fixed, db.expenses, async () => {
     const f = await db.fixed.get(fixedId);
@@ -120,8 +146,9 @@ export async function setParcels(fixedId, month, { parcels, current = 1 }) {
     const next = total ? { ...rest, parcels: total, first: addMonths(month, 1 - now) } : rest;
     await db.fixed.put(next);
     const end = fixedEnd(next);
-    if (end) for (const r of await db.expenses.where('month').above(end).toArray()) {
-      if ((r.items || []).some(i => i.fixed_id === fixedId)) await db.expenses.update(r.id, { items: r.items.filter(i => i.fixed_id !== fixedId) });
-    }
+    if (end)
+      for (const r of await db.expenses.where('month').above(end).toArray()) {
+        if ((r.items || []).some(i => i.fixed_id === fixedId)) await db.expenses.update(r.id, { items: r.items.filter(i => i.fixed_id !== fixedId) });
+      }
   });
 }

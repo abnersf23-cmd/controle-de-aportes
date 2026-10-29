@@ -3,7 +3,15 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from './database';
 import { applyFixed, duplicateExpenses, fixedEnd, parcelNumber, pinItem, setParcels, unpinItem, updatePinned } from './expenses';
 
-const source = { income_15: 1000, income_30: 800, items: [{ id: 'a', name: 'Internet', vale: 100, pagamento: 0 }, { id: 'b', name: 'Faculdade', vale: 0, pagamento: 200 }, { id: 'c', name: '', vale: 0, pagamento: 0 }] };
+const source = {
+  income_15: 1000,
+  income_30: 800,
+  items: [
+    { id: 'a', name: 'Internet', vale: 100, pagamento: 0 },
+    { id: 'b', name: 'Faculdade', vale: 0, pagamento: 200 },
+    { id: 'c', name: '', vale: 0, pagamento: 0 }
+  ]
+};
 
 describe('duplicar mês', () => {
   beforeEach(() => db.expenses.clear());
@@ -15,7 +23,16 @@ describe('duplicar mês', () => {
     expect(await db.expenses.count()).toBe(2);
   });
   it('juntar mantém o que existe e adiciona só o que falta', async () => {
-    await db.expenses.add({ id: 'x', month: '2026-11', income_15: 5, income_30: 6, items: [{ id: 'z', name: 'internet', vale: 120, pagamento: 0 }, { id: 'y', name: 'Mãe', vale: 50, pagamento: 0 }] });
+    await db.expenses.add({
+      id: 'x',
+      month: '2026-11',
+      income_15: 5,
+      income_30: 6,
+      items: [
+        { id: 'z', name: 'internet', vale: 120, pagamento: 0 },
+        { id: 'y', name: 'Mãe', vale: 50, pagamento: 0 }
+      ]
+    });
     await duplicateExpenses(source, ['2026-11'], { incomes: false, mode: 'merge' });
     const nov = await db.expenses.get('x');
     expect(nov.items.map(i => i.name)).toEqual(['internet', 'Mãe', 'Faculdade']);
@@ -24,7 +41,16 @@ describe('duplicar mês', () => {
   });
   it('juntar não duplica o mesmo nome escrito com acento ou maiúscula diferente (MÃE x Mae)', async () => {
     await db.expenses.add({ id: 'w', month: '2026-12', items: [{ id: 'm', name: 'Mae', vale: 50, pagamento: 0 }] });
-    await duplicateExpenses({ items: [{ id: 'n', name: 'MÃE', vale: 50, pagamento: 0 }, { id: 'o', name: ' cartão  ', vale: 0, pagamento: 90 }] }, ['2026-12'], { incomes: false, mode: 'merge' });
+    await duplicateExpenses(
+      {
+        items: [
+          { id: 'n', name: 'MÃE', vale: 50, pagamento: 0 },
+          { id: 'o', name: ' cartão  ', vale: 0, pagamento: 90 }
+        ]
+      },
+      ['2026-12'],
+      { incomes: false, mode: 'merge' }
+    );
     const dez = await db.expenses.get('w');
     expect(dez.items.map(i => i.name)).toEqual(['Mae', ' cartão  ']);
   });
@@ -43,12 +69,18 @@ describe('duplicar mês', () => {
 
 describe('contas fixas', () => {
   const celular = { id: 'f1', name: 'Celular', day: 30, value: 50, start: '2026-10' };
-  beforeEach(async () => { await db.expenses.clear(); await db.fixed.clear(); });
+  beforeEach(async () => {
+    await db.expenses.clear();
+    await db.fixed.clear();
+  });
 
   it('adiciona a linha no dia certo só a partir do mês de início', () => {
     expect(applyFixed([celular], '2026-09', null)).toBeNull();
     const out = applyFixed([celular], '2026-11', { items: [{ id: 'a', name: 'Internet', vale: 100, pagamento: 0 }] });
-    expect(out.items.map(i => [i.name, i.vale, i.pagamento])).toEqual([['Internet', 100, 0], ['Celular', 0, 50]]);
+    expect(out.items.map(i => [i.name, i.vale, i.pagamento])).toEqual([
+      ['Internet', 100, 0],
+      ['Celular', 0, 50]
+    ]);
     expect(out.fixed_applied).toEqual(['f1']);
     expect(applyFixed([celular], '2026-11', { items: [{ id: 'a', name: 'CELULAR ', vale: 0, pagamento: 45 }] }).items).toHaveLength(1);
   });
@@ -64,7 +96,11 @@ describe('contas fixas', () => {
   });
   it('fixar repete a linha nos meses seguintes, editar atualiza e tirar o pin remove dos seguintes', async () => {
     const nucell = { id: 'n', name: 'NUCELL', vale: 0, pagamento: 50 };
-    await db.expenses.bulkAdd([{ id: 'set', month: '2026-09', items: [] }, { id: 'out', month: '2026-10', items: [nucell] }, { id: 'nov', month: '2026-11', items: [] }]);
+    await db.expenses.bulkAdd([
+      { id: 'set', month: '2026-09', items: [] },
+      { id: 'out', month: '2026-10', items: [nucell] },
+      { id: 'nov', month: '2026-11', items: [] }
+    ]);
     const fid = await pinItem('2026-10', nucell);
     expect((await db.expenses.get('set')).items).toEqual([]);
     expect((await db.expenses.get('out')).items[0].fixed_id).toBe(fid);
@@ -88,7 +124,11 @@ describe('contas fixas', () => {
   });
   it('parcelas: a conta para de aparecer depois da última', async () => {
     const pan = { id: 'p', name: 'PAN', vale: 0, pagamento: 96 };
-    await db.expenses.bulkAdd([{ id: 'jan', month: '2027-01', items: [pan] }, { id: 'mar', month: '2027-03', items: [] }, { id: 'abr', month: '2027-04', items: [] }]);
+    await db.expenses.bulkAdd([
+      { id: 'jan', month: '2027-01', items: [pan] },
+      { id: 'mar', month: '2027-03', items: [] },
+      { id: 'abr', month: '2027-04', items: [] }
+    ]);
     const fid = await pinItem('2027-01', pan);
     expect((await db.expenses.get('abr')).items).toHaveLength(1);
     await setParcels(fid, '2027-01', { parcels: 10, current: 8 }); // jan = 8/10 → termina em mar
@@ -104,7 +144,10 @@ describe('contas fixas', () => {
   });
   it('categoria da linha fixada vai junto para os meses seguintes', async () => {
     const net = { id: 'i', name: 'Internet', vale: 150, pagamento: 0, category: 'assinaturas' };
-    await db.expenses.bulkAdd([{ id: 'a', month: '2026-12', items: [net] }, { id: 'b', month: '2027-01', items: [] }]);
+    await db.expenses.bulkAdd([
+      { id: 'a', month: '2026-12', items: [net] },
+      { id: 'b', month: '2027-01', items: [] }
+    ]);
     const fid = await pinItem('2026-12', net);
     expect((await db.expenses.get('b')).items[0].category).toBe('assinaturas');
     await updatePinned('2026-12', { ...net, fixed_id: fid, category: 'outros' });

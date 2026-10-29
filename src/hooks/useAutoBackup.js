@@ -15,13 +15,19 @@ export default function useAutoBackup(enabled) {
     // Ler todas as tabelas dentro do liveQuery faz o Dexie avisar quando qualquer uma mudar.
     const sub = liveQuery(() => Promise.all(TABLES.map(t => db[t].toArray()))).subscribe({
       next: () => {
-        if (first) { first = false; return; }
+        if (first) {
+          first = false;
+          return;
+        }
         clearTimeout(timer.current);
         timer.current = setTimeout(() => backupIfPossible().catch(() => {}), 5000);
       }
     });
     backupIfPossible().catch(() => {}); // um backup ao abrir o app
-    return () => { sub.unsubscribe(); clearTimeout(timer.current); };
+    return () => {
+      sub.unsubscribe();
+      clearTimeout(timer.current);
+    };
   }, [enabled]);
 }
 
@@ -29,17 +35,22 @@ export default function useAutoBackup(enabled) {
 // A permissão é consultada fora do liveQuery (é uma API do navegador, não do Dexie)
 // e de novo quando a janela volta ao foco.
 export function useBackupFolder() {
-  const info = useLiveQuery(async () => ({
-    dir: (await db.settings.get('backupDir'))?.value || null,
-    lastAuto: (await db.settings.get('lastAutoBackup'))?.value || null
-  }), []);
+  const info = useLiveQuery(
+    async () => ({
+      dir: (await db.settings.get('backupDir'))?.value || null,
+      lastAuto: (await db.settings.get('lastAutoBackup'))?.value || null
+    }),
+    []
+  );
   const [status, setStatus] = useState(undefined);
   const [tick, setTick] = useState(0);
   useEffect(() => {
     if (!info) return;
     let alive = true;
     folderStatus().then(s => alive && setStatus(s));
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [info, tick]);
   useEffect(() => {
     const onFocus = () => setTick(t => t + 1);
@@ -61,7 +72,11 @@ export function usePickFolder(onDone) {
       onDone?.();
       return true;
     } catch (e) {
-      if (e?.name === 'AbortError') toast('Nenhuma pasta foi escolhida, o backup automático NÃO foi ativado. Dica: o Chrome não aceita Documentos, Área de Trabalho ou Downloads direto; crie uma subpasta (ex.: Documentos\\Backup Aportes) e escolha ela.', { type: 'info', duration: 12000 });
+      if (e?.name === 'AbortError')
+        toast(
+          'Nenhuma pasta foi escolhida, o backup automático NÃO foi ativado. Dica: o Chrome não aceita Documentos, Área de Trabalho ou Downloads direto; crie uma subpasta (ex.: Documentos\\Backup Aportes) e escolha ela.',
+          { type: 'info', duration: 12000 }
+        );
       else toast(e?.message || 'Não consegui usar essa pasta.', { type: 'error' });
       return false;
     }

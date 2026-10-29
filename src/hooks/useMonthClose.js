@@ -9,10 +9,13 @@ import { REPORTS_DIR, saveReportsIfPossible } from '@/services/monthReports';
 
 // Dados do fechamento: meses fechados e meses que ainda precisam de relatório.
 export function useClosedMonths() {
-  const info = useLiveQuery(async () => ({
-    records: await db.expenses.toArray(),
-    closed: (await db.settings.get('closedMonths'))?.value || {}
-  }), []);
+  const info = useLiveQuery(
+    async () => ({
+      records: await db.expenses.toArray(),
+      closed: (await db.settings.get('closedMonths'))?.value || {}
+    }),
+    []
+  );
   const pending = useMemo(() => (info ? pendingReports(info.records, info.closed) : []), [info]);
   return { loading: !info, records: info?.records || [], closed: info?.closed || {}, pending };
 }
@@ -30,6 +33,8 @@ export default function useMonthClose(enabled) {
     saveReportsIfPossible(key.split(','))
       .then(saved => saved.length && toast(`Relatório de ${saved.map(monthLabel).join(', ')} salvo em "${folderName}\\${REPORTS_DIR}".`, { duration: 8000 }))
       .catch(e => toast(`Não consegui salvar o relatório do mês: ${e?.message || e}`, { type: 'error' }))
-      .finally(() => { running.current = false; });
+      .finally(() => {
+        running.current = false;
+      });
   }, [enabled, key, status, folderName, toast]);
 }

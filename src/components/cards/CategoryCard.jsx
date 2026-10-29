@@ -17,14 +17,24 @@ export default function CategoryCard({ name, items, renderBucket, onAdd }) {
           <p className="text-xs font-bold uppercase tracking-wider text-muted">{name}</p>
           <p className="mt-0.5 text-2xl font-bold">{brl(totalBalance)}</p>
           <p className="truncate text-xs text-muted">{items.map(i => `${i.b.icon} ${i.b.name}`).join(' · ')}</p>
-          <p className="mt-1 text-xs text-faint">Aportado {brl(totalContributed)} · {pct(totalPercentage)} do aporte</p>
+          <p className="mt-1 text-xs text-faint">
+            Aportado {brl(totalContributed)} · {pct(totalPercentage)} do aporte
+          </p>
         </div>
         <ChevronDown size={20} className={`shrink-0 text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
-      {open && <div className="space-y-3 border-t border-line px-4 pb-4 pt-3">
-        <div className="grid gap-3 md:grid-cols-2">{items.map(renderBucket)}</div>
-        <button type="button" onClick={onAdd} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-2.5 text-sm font-semibold text-muted transition hover:border-accent hover:text-accent"><Plus size={16} /> Adicionar bucket em {name}</button>
-      </div>}
+      {open && (
+        <div className="space-y-3 border-t border-line px-4 pb-4 pt-3">
+          <div className="grid gap-3 md:grid-cols-2">{items.map(renderBucket)}</div>
+          <button
+            type="button"
+            onClick={onAdd}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-2.5 text-sm font-semibold text-muted transition hover:border-accent hover:text-accent"
+          >
+            <Plus size={16} /> Adicionar bucket em {name}
+          </button>
+        </div>
+      )}
     </article>
   );
 }

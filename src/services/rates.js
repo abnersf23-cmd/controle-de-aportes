@@ -13,9 +13,15 @@ async function fetchSeries(code) {
 // Busca as três séries. As que falharem mantêm o último valor salvo (modo offline).
 export async function fetchMarketRates() {
   const saved = (await db.settings.get('marketRates'))?.value || {};
-  const entries = await Promise.all(Object.entries(SERIES).map(async ([key, s]) => {
-    try { return [key, await fetchSeries(s.code)]; } catch { return [key, saved[key] || null]; }
-  }));
+  const entries = await Promise.all(
+    Object.entries(SERIES).map(async ([key, s]) => {
+      try {
+        return [key, await fetchSeries(s.code)];
+      } catch {
+        return [key, saved[key] || null];
+      }
+    })
+  );
   const next = Object.fromEntries(entries);
   const ok = entries.some(([key, v]) => v && v !== saved[key]);
   if (!ok && !Object.values(next).some(Boolean)) throw new Error('Não consegui buscar as taxas do Banco Central. Confira a internet.');
