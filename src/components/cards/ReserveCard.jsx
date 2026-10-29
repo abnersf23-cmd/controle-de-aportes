@@ -80,7 +80,7 @@ export default function ReserveCard({ assistant, balances }) {
           </div>
           <div>
             <div className="h-3 overflow-hidden rounded-full bg-surface2">
-              <div className="h-full rounded-full bg-info transition-all" style={{ width: `${st.progress}%` }} />
+              <div className="bar-fill h-full rounded-full bg-info" style={{ width: `${st.progress}%` }} />
             </div>
             <div className="mt-1 flex justify-between text-xs text-muted">
               <span>

@@ -1,4 +1,5 @@
 import { brl } from '@/lib/finance';
+import CountUp from '@/components/ui/CountUp';
 
 // Um card só com o resumo do mês (antes eram três: total de contas, falta pagar e o que sobra).
 // Colunas = dia 15 e dia 30; a última linha é o que sobra no fim do mês.
@@ -15,11 +16,16 @@ export default function SheetSummary({ t }) {
       </div>
       <div>
         <p className="text-xs text-muted">Sobra no fim do mês</p>
-        <p className={`text-3xl font-bold ${t.leftover < 0 ? 'text-bad' : 'text-good'}`}>{brl(t.leftover)}</p>
+        <p className={`text-3xl font-bold ${t.leftover < 0 ? 'text-bad' : 'text-good'}`}>
+          <CountUp value={brl(t.leftover)} />
+        </p>
       </div>
       {t.income > 0 && (
         <div className="h-2 overflow-hidden rounded-full bg-surface2">
-          <div className={`h-full ${t.bills > t.income ? 'bg-bad' : 'bg-accent'}`} style={{ width: `${Math.min(100, (t.bills / t.income) * 100)}%` }} />
+          <div
+            className={`bar-fill h-full ${t.bills > t.income ? 'bg-bad' : 'bg-accent'}`}
+            style={{ width: `${Math.min(100, (t.bills / t.income) * 100)}%` }}
+          />
         </div>
       )}
       <table className="w-full text-sm">

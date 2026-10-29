@@ -92,3 +92,106 @@ input[type='number'] {
     @apply mt-1 text-sm text-muted;
   }
 }
+
+/* ---------- Animações ----------
+   Curtas e suaves: ajudam a ver o que mudou, sem atrasar quem usa.
+   Quem ativou "reduzir movimento" no sistema não vê nenhuma (bloco no fim). */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Ao trocar de aba, os blocos da página entram um depois do outro (efeito "cascata"). */
+.page-enter > * > * {
+  animation: fade-up 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.page-enter > * > *:nth-child(2) {
+  animation-delay: 0.05s;
+}
+.page-enter > * > *:nth-child(3) {
+  animation-delay: 0.1s;
+}
+.page-enter > * > *:nth-child(4) {
+  animation-delay: 0.15s;
+}
+.page-enter > * > *:nth-child(n + 5) {
+  animation-delay: 0.2s;
+}
+/* Abas dentro de uma página (Início, Simuladores): só um fade rápido. */
+.fade-in {
+  animation: fade-up 0.3s ease-out both;
+}
+/* Barras de progresso "enchem" ao aparecer e deslizam quando o valor muda. */
+.bar-fill {
+  transform-origin: left;
+  animation: grow-x 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  transition: width 0.5s ease;
+}
+.modal-backdrop {
+  animation: fade 0.2s ease-out both;
+}
+.modal-panel {
+  animation: pop-in 0.25s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* ---------- Slider (input range) ----------
+   A parte já percorrida fica na cor de destaque: --fill vem do componente Slider (0% a 100%). */
+.range {
+  @apply h-2 w-full cursor-pointer appearance-none rounded-full outline-none;
+  background: linear-gradient(to right, rgb(var(--accent)) var(--fill, 0%), rgb(var(--line)) var(--fill, 0%));
+}
+.range::-webkit-slider-thumb {
+  @apply h-5 w-5 appearance-none rounded-full border-4 border-surface bg-accent shadow-md transition-transform;
+}
+.range::-moz-range-thumb {
+  @apply h-4 w-4 rounded-full border-4 border-surface bg-accent shadow-md transition-transform;
+}
+.range:hover::-webkit-slider-thumb,
+.range:active::-webkit-slider-thumb {
+  transform: scale(1.2);
+}
+.range:focus-visible {
+  @apply ring-2 ring-accent/40 ring-offset-2 ring-offset-surface;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter > * > *,
+  .fade-in,
+  .bar-fill,
+  .modal-backdrop,
+  .modal-panel {
+    animation: none;
+  }
+}

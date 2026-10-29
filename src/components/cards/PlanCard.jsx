@@ -65,7 +65,7 @@ export default function PlanCard({ buckets, records, extras, stocks }) {
                   {r.icon} {r.name}
                 </span>
                 <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface2">
-                  <div className={`h-full rounded-full ${r.diff >= 0 ? 'bg-good' : 'bg-warn'}`} style={{ width: `${r.progress}%` }} />
+                  <div className={`bar-fill h-full rounded-full ${r.diff >= 0 ? 'bg-good' : 'bg-warn'}`} style={{ width: `${r.progress}%` }} />
                 </div>
               </td>
               <td className="py-1.5 text-right">{brl(r.planned)}</td>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Field } from '@/components/ui/Bits';
 import { Answer, Figure, More } from '@/components/simuladores/Parts';
+import Slider from '@/components/ui/Slider';
 import useMarketRates from '@/hooks/useMarketRates';
 import { interestSavings, simulateAnticipation } from '@/lib/debt';
 import { brl, pct } from '@/lib/finance';
@@ -57,6 +58,7 @@ function SimulatorForm({ debt }) {
     taxFree: false
   });
   const set = key => e => setF(x => ({ ...x, [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
+  const put = key => value => setF(x => ({ ...x, [key]: value }));
   const remaining = Number(f.remaining) || 0;
   // Em branco = todas as que faltam (quitar).
   const count = Math.min(f.count === '' ? remaining : Number(f.count) || 0, remaining);
@@ -75,19 +77,37 @@ function SimulatorForm({ debt }) {
         <Field label="2. Quantas parcelas ainda faltam?">
           <input type="number" min="1" step="1" value={f.remaining} onChange={set('remaining')} className="field" />
         </Field>
-        <Field label="3. Juros do contrato (% ao mês)" hint="Está no contrato, no carnê ou no app do banco. Compra parcelada “sem juros”? Digite 0.">
-          <input type="number" min="0" step="0.01" value={f.debtRate} onChange={set('debtRate')} placeholder="ex.: 2,5" className="field" />
-        </Field>
+        <div className="space-y-1">
+          <Slider
+            label="3. Juros do contrato (% ao mês)"
+            unit="%"
+            value={f.debtRate}
+            onChange={put('debtRate')}
+            min={0}
+            max={10}
+            step={0.1}
+            format={v => pct(v)}
+            placeholder="ex.: 2,5"
+          />
+          <p className="text-xs text-faint">Está no contrato, no carnê ou no app do banco. Compra parcelada “sem juros”? Deixe em 0.</p>
+        </div>
         <More>
           <Field label="Quantas antecipar" hint="Em branco = todas (quitar). As últimas têm mais desconto.">
             <input type="number" min="1" step="1" max={f.remaining} value={f.count} onChange={set('count')} placeholder="todas" className="field" />
           </Field>
-          <Field
-            label="Quanto seu dinheiro rende investido (% ao ano)"
-            hint={rates?.cdi ? `Sugestão: CDI de ${pct(rates.cdi.value)}.` : 'Ex.: a taxa do seu Tesouro ou CDB.'}
-          >
-            <input type="number" min="0" step="0.01" value={f.investRate} onChange={set('investRate')} className="field" />
-          </Field>
+          <div className="sm:col-span-2">
+            <Slider
+              label="Quanto seu dinheiro rende investido (% ao ano)"
+              unit="%"
+              value={f.investRate}
+              onChange={put('investRate')}
+              min={0}
+              max={20}
+              step={0.5}
+              format={v => pct(v)}
+              hint={rates?.cdi ? `CDI hoje: ${pct(rates.cdi.value)}` : 'ex.: seu Tesouro ou CDB'}
+            />
+          </div>
           <label className="flex items-center gap-2 text-sm sm:col-span-2">
             <input type="checkbox" checked={f.taxFree} onChange={set('taxFree')} className="h-4 w-4 accent-[rgb(var(--accent))]" />O investimento é isento de IR
             (LCI/LCA)

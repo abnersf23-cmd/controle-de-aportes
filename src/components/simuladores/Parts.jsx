@@ -1,4 +1,5 @@
 import { ChevronDown } from 'lucide-react';
+import CountUp from '@/components/ui/CountUp';
 
 // Peças comuns dos simuladores, para todos terem o mesmo jeito:
 // poucos campos em cima, os detalhes escondidos em "Ajustar detalhes" e a resposta em uma frase.
@@ -32,26 +33,10 @@ export function Figure({ label, value, hint, className = '' }) {
   return (
     <div className={`rounded-xl bg-surface2 p-3 ${className}`}>
       <p className="text-xs text-muted">{label}</p>
-      <p className="text-xl font-bold">{value}</p>
+      <p className="text-xl font-bold">
+        <CountUp value={value} />
+      </p>
       {hint && <p className="text-xs text-faint">{hint}</p>}
-    </div>
-  );
-}
-
-// Botões de escolha rápida (ex.: 12, 24, 48 meses), com o campo livre ao lado para outro valor.
-export function Chips({ value, options, onChange, format = v => v }) {
-  return (
-    <div className="mt-1.5 flex flex-wrap gap-1.5">
-      {options.map(o => (
-        <button
-          key={o}
-          type="button"
-          onClick={() => onChange(String(o))}
-          className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${String(value) === String(o) ? 'border-accent bg-accent/10 text-accent' : 'border-line text-muted hover:text-ink'}`}
-        >
-          {format(o)}
-        </button>
-      ))}
     </div>
   );
 }

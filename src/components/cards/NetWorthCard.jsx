@@ -6,6 +6,7 @@ import useSetting from '@/hooks/useSetting';
 import { newId } from '@/db/database';
 import { brl, monthKey } from '@/lib/finance';
 import { netWorth, parcelDebts } from '@/lib/networth';
+import CountUp from '@/components/ui/CountUp';
 
 // Patrimônio líquido: o que você tem investido menos o que ainda deve.
 // As parcelas vêm sozinhas dos Gastos mensais; as outras dívidas você digita (cartão, empréstimo…).
@@ -38,7 +39,9 @@ export default function NetWorthCard({ assets }) {
           <Pencil size={16} />
         </button>
       </div>
-      <p className={`text-3xl font-bold ${nw.net < 0 ? 'text-bad' : ''}`}>{brl(nw.net)}</p>
+      <p className={`text-3xl font-bold ${nw.net < 0 ? 'text-bad' : ''}`}>
+        <CountUp value={brl(nw.net)} />
+      </p>
       {/* A conta de cabeça, em uma linha: o que você tem − o que deve = o que é seu de verdade. */}
       <div className="space-y-1 rounded-xl bg-surface2 p-3 text-sm">
         <div className="flex justify-between">

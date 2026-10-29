@@ -41,7 +41,7 @@ export default function PatrimonyChart({ data }) {
                 </defs>
                 <CartesianGrid {...gridProps} />
                 <XAxis dataKey="month" tickFormatter={short} {...axisProps} minTickGap={16} />
-                <YAxis tickFormatter={compactBrl} {...axisProps} width={84} />
+                <YAxis tickFormatter={compactBrl} {...axisProps} width={96} />
                 <Tooltip {...tooltipProps} formatter={v => [brl(v), 'Patrimônio']} labelFormatter={monthLabel} />
                 <Area
                   type="monotone"

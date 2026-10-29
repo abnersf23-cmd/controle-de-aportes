@@ -28,7 +28,7 @@ test('aposentadoria: R$ 3.000 por mês com a regra dos 4% pede R$ 900 mil', asyn
   await startFresh(page);
   await goTo(page, 'simuladores/aposentadoria');
   await page.getByLabel('Quantos anos você tem?').fill('22');
-  await page.getByRole('button', { name: 'R$ 3.000', exact: true }).click();
+  await page.getByLabel('Quanto quer receber por mês?').fill('3000');
   await expect(page.getByText(/Assim você junta R\$\s900\.000,00/)).toBeVisible();
 });
 
@@ -39,6 +39,18 @@ test('onde investir: destaca a opção segura que mais rende e mostra a LCI isen
   await expect(page.getByText(/Isenta de IR/)).toBeVisible();
   // 1 ano = 365 dias: CDB e Tesouro já pagam 17,5% de IR, não 20%.
   await expect(page.getByText(/IR de 17,5%/).first()).toBeVisible();
+});
+
+test('slider e campo andam juntos: arrastar o prazo muda o número e a resposta', async ({ page }) => {
+  await startFresh(page);
+  await goTo(page, 'simuladores/consignado');
+  const prazo = page.getByLabel('Em quantos meses quer pagar?');
+  await expect(prazo).toHaveValue('24');
+  const slider = page.getByRole('slider').nth(1);
+  await slider.focus();
+  await page.keyboard.press('ArrowRight'); // passo de 6 meses
+  await expect(prazo).toHaveValue('30');
+  await expect(page.getByText(/^30 parcelas de/)).toBeVisible();
 });
 
 test('patrimônio líquido explica a diferença para o total da carteira', async ({ page }) => {

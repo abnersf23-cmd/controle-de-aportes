@@ -84,7 +84,7 @@ export default function BudgetCard({ byCategory }) {
                 {c.limit > 0 && (
                   <>
                     <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface2">
-                      <div className={`h-full rounded-full ${barColor[c.level]}`} style={{ width: `${Math.min(100, c.ratio * 100)}%` }} />
+                      <div className={`bar-fill h-full rounded-full ${barColor[c.level]}`} style={{ width: `${Math.min(100, c.ratio * 100)}%` }} />
                     </div>
                     {c.level !== 'ok' && (
                       <p className={`mt-0.5 text-xs ${textColor[c.level]}`}>

@@ -38,7 +38,7 @@ export default function ProjectionChart({ data, showReal = false }) {
             </defs>
             <CartesianGrid {...gridProps} />
             <XAxis dataKey="n" tickFormatter={tick} {...axisProps} interval={rows.length > 24 ? 11 : rows.length > 12 ? 5 : 2} />
-            <YAxis tickFormatter={compactBrl} {...axisProps} width={84} />
+            <YAxis tickFormatter={compactBrl} {...axisProps} width={96} />
             <Tooltip {...tooltipProps} labelFormatter={n => tick(n)} formatter={(v, name) => [brl(v), SERIES.find(s => s.key === name)?.label || name]} />
             <Area type="monotone" dataKey="Total" stroke="rgb(var(--accent))" strokeWidth={2} fill="url(#proj)" activeDot={activeDot('rgb(var(--accent))')} />
             {showReal && (
