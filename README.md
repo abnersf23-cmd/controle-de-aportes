@@ -33,6 +33,7 @@ e não mostrava quanto cada parte realmente rendeu. O app responde a três pergu
 | **Saques e gastos** | Histórico com filtro, gráfico por categoria e exportação CSV |
 | **Gastos mensais** | Planilha por quinzena (dia 15 e dia 30) com "duplicar mês" para até 12 meses contas fixas (📌) que se repetem sozinhas, parcelas com fim, categorias com gráfico, **orçamento por categoria** (aviso a 80% e ao passar do limite), **simulador "antecipar parcelas x investir"** e marcação de contas pagas |
 | **Relatório** | Lançamentos por dia, semana ou mês, evolução do patrimônio e CSV |
+| **Fechamento do mês** | Resumo do mês comparado com o anterior: entradas, contas e sobra, gastos por categoria contra o orçamento, aportes previsto x realizado, saques e variação do patrimônio. Botão **Imprimir / PDF** |
 | **Projeção** | Simulação de 1 a 10 anos a partir do patrimônio atual, **descontando a inflação** (IPCA do Banco Central) e **metas de R$ 10 mil, 100 mil, 500 mil e 1 milhão** |
 | **Gerenciar ativos** | Buckets, taxas (CDI, Selic, Fed, personalizada), bucket protegido e rebalanceamento automático para 100% |
 | **Backup** | Exportar/restaurar `.json` (dados **e configurações**), **backup com senha** (AES-256) e backup automático diário numa pasta escolhida |
@@ -151,7 +152,7 @@ Os testes também rodam sozinhos no GitHub Actions a cada push
 ([`.github/workflows/testes.yml`](.github/workflows/testes.yml)): os de lógica duas vezes (fuso UTC e
 fuso de Brasília, para pegar erros de data que só aparecem em um deles) e os de interface no Chromium.
 
-**73 testes de lógica** (Vitest) cobrindo:
+**77 testes de lógica** (Vitest) cobrindo:
 
 - juros compostos diários e troca de taxa no meio do período;
 - conversão e rendimento em dólar;
@@ -165,10 +166,11 @@ fuso de Brasília, para pegar erros de data que só aparecem em um deles) e os d
 - leitura da API do Banco Central e taxa real (inflação);
 - backup com senha (senha errada, arquivo alterado, senha curta);
 - simulador de antecipar parcelas x investir (valor presente e IR regressivo);
+- fechamento do mês (comparação com o mês anterior, aportes e patrimônio);
 - nomes com acento ou maiúscula diferente ("MÃE" e "Mae" são a mesma conta).
 
-**6 testes de interface** (Playwright, em [`e2e/`](e2e)) que abrem o app e clicam como um usuário:
-plano de aportes, aviso de Selic nova, orçamento estourado, simulador de parcelas, projeção com metas e backup com senha.
+**7 testes de interface** (Playwright, em [`e2e/`](e2e)) que abrem o app e clicam como um usuário:
+plano de aportes, aviso de Selic nova, orçamento estourado, simulador de parcelas, projeção com metas, fechamento do mês e backup com senha.
 As respostas do Banco Central e do Yahoo são simuladas, então os testes não dependem da internet.
 
 ## Estrutura do código

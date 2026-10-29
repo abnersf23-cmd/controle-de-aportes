@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { BarChart3, CalendarRange, Database, Home, LineChart, Moon, Receipt, Settings2, Sun, TrendingUp } from 'lucide-react';
+import { BarChart3, CalendarCheck, CalendarRange, Database, Home, LineChart, Moon, Receipt, Settings2, Sun, TrendingUp } from 'lucide-react';
 import { db } from '@/db/database';
 import useFinanceData from '@/hooks/useFinanceData';
 import useAutoBackup from '@/hooks/useAutoBackup';
@@ -10,19 +10,21 @@ import Acoes from '@/pages/Acoes';
 import Saques from '@/pages/Saques';
 import GastosMensais from '@/pages/GastosMensais';
 import Relatorio from '@/pages/Relatorio';
+import Fechamento from '@/pages/Fechamento';
 import Gerenciar from '@/pages/Gerenciar';
 import Projecao from '@/pages/Projecao';
 import Backup from '@/pages/Backup';
 import Boasvindas from '@/pages/Boasvindas';
 import { brl, totalBalance } from '@/lib/finance';
 
-// As 7 abas do app original + Backup.
+// As 7 abas do app original + Fechamento do mês e Backup.
 const PAGES = [
   { id: 'inicio', label: 'Início', icon: Home, Component: Inicio },
   { id: 'acoes', label: 'FIIs e Ações', icon: TrendingUp, Component: Acoes },
   { id: 'saques', label: 'Saques e gastos', icon: Receipt, Component: Saques },
   { id: 'gastos', label: 'Gastos mensais', icon: CalendarRange, Component: GastosMensais },
   { id: 'relatorio', label: 'Relatório', icon: BarChart3, Component: Relatorio },
+  { id: 'fechamento', label: 'Fechamento do mês', icon: CalendarCheck, Component: Fechamento },
   { id: 'projecao', label: 'Projeção', icon: LineChart, Component: Projecao },
   { id: 'gerenciar', label: 'Gerenciar ativos', icon: Settings2, Component: Gerenciar },
   { id: 'backup', label: 'Backup', icon: Database, Component: Backup }
@@ -62,9 +64,9 @@ export default function App() {
   const total = totalBalance(data.buckets, data.records, data.extras, data.withdrawals, new Date(), data.stocks);
 
   return (
-    <div className="min-h-screen lg:pl-64">
+    <div className="min-h-screen lg:pl-64 print:pl-0">
       {/* Menu lateral (computador) */}
-      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-line bg-surface p-4 lg:flex">
+      <aside className="fixed inset-y-0 left-0 hidden w-64 print:!hidden flex-col border-r border-line bg-surface p-4 lg:flex">
         <div className="mb-6 flex items-center gap-2.5 px-2">
           <img src="/favicon.svg" alt="" className="h-8 w-8" />
           <div><p className="font-bold leading-tight">Controle de Aportes</p><p className="text-xs text-muted">versão local</p></div>
@@ -84,7 +86,7 @@ export default function App() {
       </aside>
 
       {/* Topo (celular/tablet) */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface/90 px-4 py-3 backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-30 flex print:hidden items-center justify-between border-b border-line bg-surface/90 px-4 py-3 backdrop-blur lg:hidden">
         <div className="flex items-center gap-2"><img src="/favicon.svg" alt="" className="h-7 w-7" /><span className="font-bold">{page.label}</span></div>
         <div className="flex items-center gap-1">
           <select value={tab} onChange={e => goTo(e.target.value)} className="field mt-0 w-auto py-1.5 text-xs" aria-label="Ir para">{PAGES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}</select>
@@ -93,12 +95,12 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:pb-10 lg:pt-8">
-        {tab !== 'backup' && <BackupBanner goTo={goTo} />}
+        {tab !== 'backup' && <div className="print:hidden"><BackupBanner goTo={goTo} /></div>}
         <Page data={data} goTo={goTo} />
       </main>
 
       {/* Barra inferior (celular) */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-surface/95 backdrop-blur lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 print:hidden grid grid-cols-5 border-t border-line bg-surface/95 backdrop-blur lg:hidden">
         {PAGES.filter(p => MOBILE.includes(p.id)).map(p => (
           <button key={p.id} onClick={() => goTo(p.id)} className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold ${tab === p.id ? 'text-accent' : 'text-muted'}`}><p.icon size={20} />{p.label.split(' ')[0]}</button>
         ))}
