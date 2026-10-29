@@ -32,7 +32,7 @@ test('orçamento por categoria avisa no Início e saldo do mês é projetado', a
 
 test('simulador: com juros de 3% ao mês, antecipar vale mais que investir a 12% ao ano', async ({ page }) => {
   await startFresh(page);
-  await goTo(page, 'gastos');
+  await goTo(page, 'simuladores/antecipar');
   await page.getByRole('button', { name: 'Simular outra dívida' }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Valor da parcela (R$)').fill('300');
@@ -40,6 +40,7 @@ test('simulador: com juros de 3% ao mês, antecipar vale mais que investir a 12%
   await dialog.getByLabel('Quantas antecipar').fill('12');
   await dialog.getByLabel('Juros do contrato (% ao mês)').fill('3');
   await dialog.getByLabel('Rendimento do investimento (% ao ano)').fill('12');
-  await expect(dialog.getByText('Desconto da antecipação')).toBeVisible();
+  await expect(dialog.getByText('Antecipando 12 parcelas')).toBeVisible();
+  await expect(dialog.getByText('Quitando tudo')).toBeVisible();
   await expect(dialog.getByText(/Antecipar\s*deixa você com/)).toBeVisible();
 });

@@ -41,3 +41,11 @@ export function simulateAnticipation({ parcel, remaining, count = remaining, deb
     investNetMonthly: round(investNetMonthly * 100) / 100
   };
 }
+
+// Economia de juros: quanto você deixa de pagar antecipando as `count` últimas parcelas
+// e quanto deixaria quitando tudo hoje. É a diferença entre o valor das parcelas e o valor presente.
+export function interestSavings({ parcel, remaining, count = remaining, debtRate }) {
+  const base = { parcel, remaining, debtRate, investRate: 0 };
+  const some = simulateAnticipation({ ...base, count }), all = simulateAnticipation({ ...base, count: remaining });
+  return { anticipate: some.discount, anticipateCost: some.cost, payoff: all.discount, payoffCost: all.cost, totalLeft: all.nominal };
+}

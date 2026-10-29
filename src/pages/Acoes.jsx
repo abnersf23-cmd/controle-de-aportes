@@ -6,7 +6,8 @@ import { useAction } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/Confirm';
 import StockTradeForm from '@/components/forms/StockTradeForm';
 import StockForm from '@/components/forms/StockForm';
-import { brl, dateLabel, round, stockAveragePrice, stockDividendsReceived, stockInvested, stockMarketValue, stockQuantity, stockTotal } from '@/lib/finance';
+import { dividendYield } from '@/lib/stocks';
+import { brl, dateLabel, pct, round, stockAveragePrice, stockDividendsReceived, stockInvested, stockMarketValue, stockQuantity, stockTotal } from '@/lib/finance';
 
 const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 const fmtPct = v => `${v >= 0 ? '+' : ''}${v.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
@@ -16,6 +17,7 @@ function AssetCard({ stock, quote, onTrade, onEdit, onDeleteOp, onRemove }) {
   const profit = market != null ? round(market - invested) : null;
   const profitPct = profit != null && invested > 0 ? round(profit / invested * 100) : null;
   const dividends = quote?.dividends ? stockDividendsReceived(stock, quote.dividends) : null;
+  const dy = dividendYield(stock, quote);
   const months = [...(stock.dividend_months || [])].sort((a, b) => a - b);
   const cur = new Date().getMonth() + 1;
   const next = months.find(m => m >= cur) ?? months[0];
@@ -46,7 +48,11 @@ function AssetCard({ stock, quote, onTrade, onEdit, onDeleteOp, onRemove }) {
       </dl>
       {profit != null && qty > 0 && <div className="flex justify-between text-sm"><span className="text-muted">Resultado</span><strong className={`flex items-center gap-1 ${profit >= 0 ? 'text-good' : 'text-bad'}`}>{profit >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}{brl(profit)}{profitPct != null && ` (${fmtPct(profitPct)})`}</strong></div>}
       <div className="flex justify-between text-sm"><span className="text-muted">Dividendos recebidos</span><strong className={dividends > 0 ? 'text-good' : 'text-faint'}>{dividends > 0 ? brl(dividends) : '—'}</strong></div>
-      <div className="flex flex-wrap items-center gap-1">{months.map(m => <span key={m} className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${m === next ? 'bg-good/25 text-good' : 'bg-good/10 text-good/70'}`}>{MONTHS[m - 1]}</span>)}{next && <span className="ml-1 text-xs text-muted">próximo: {MONTHS[next - 1]}</span>}</div>
+      {(dy.dy != null || dy.yoc != null) && <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="rounded-xl bg-good/10 p-2.5" title="Proventos dos últimos 12 meses ÷ cotação de hoje"><p className="text-xs text-muted">Dividend yield (12m)</p><p className="font-semibold text-good">{dy.dy != null ? pct(dy.dy) : '—'}</p></div>
+        <div className="rounded-xl bg-good/10 p-2.5" title="Proventos dos últimos 12 meses ÷ seu preço médio"><p className="text-xs text-muted">Sobre o que você pagou</p><p className="font-semibold text-good">{dy.yoc != null ? pct(dy.yoc) : '—'}</p></div>
+      </div>}
+      {next && <p className="text-xs text-muted">Próximo pagamento: <strong className="text-ink">{MONTHS[next - 1]}</strong>{dy.monthlyNow != null && <> · cerca de {brl(dy.monthlyNow)} por mês</>}</p>}
       <div className="grid grid-cols-2 gap-2">
         <button onClick={() => onTrade('buy')} className="btn-primary py-2"><Plus size={16} /> Comprar</button>
         <button onClick={() => onTrade('sell')} disabled={qty <= 0} className="btn-secondary py-2"><Minus size={16} /> Vender</button>
@@ -77,6 +83,7 @@ export default function Acoes({ data }) {
   const invested = stockTotal(stocks);
   const market = round(stocks.reduce((s, st) => s + (stockMarketValue(st, quotes[st.ticker]) ?? 0), 0));
   const dividends = round(stocks.reduce((s, st) => s + (quotes[st.ticker]?.dividends ? stockDividendsReceived(st, quotes[st.ticker].dividends) : 0), 0));
+  const monthlyIncome = round(stocks.reduce((s, st) => s + (dividendYield(st, quotes[st.ticker]).monthlyNow || 0), 0));
   const hasQuotes = stocks.some(st => stockMarketValue(st, quotes[st.ticker]) != null);
   const profit = round(market - invested);
   const refresh = () => run(async () => {
@@ -97,7 +104,7 @@ export default function Acoes({ data }) {
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Aportado (líquido)" value={brl(invested)} />
         <Stat label="Valor de mercado" value={hasQuotes ? brl(market) : quotesLoading ? '…' : '—'} hint={hasQuotes ? undefined : 'sem cotações'} />
-        <Stat label="Dividendos recebidos" value={brl(dividends)} tone="good" />
+        <Stat label="Dividendos recebidos" value={brl(dividends)} tone="good" hint={monthlyIncome > 0 ? `renda de ~${brl(monthlyIncome)}/mês` : undefined} />
         <Stat label="Resultado" value={hasQuotes ? `${brl(profit)}${invested > 0 ? ` (${fmtPct(round(profit / invested * 100))})` : ''}` : '—'} tone={!hasQuotes ? 'ink' : profit >= 0 ? 'good' : 'bad'} />
       </section>
 

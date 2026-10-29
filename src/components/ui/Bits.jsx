@@ -39,7 +39,7 @@ export function Segmented({ value, onChange, options }) {
   return (
     <div className="inline-flex rounded-xl border border-line bg-surface2 p-1">
       {options.map(o => (
-        <button key={o.value} type="button" onClick={() => onChange(o.value)} className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${value === o.value ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'}`}>{o.label}</button>
+        <button key={o.value} type="button" onClick={() => onChange(o.value)} className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold transition ${value === o.value ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'}`}>{o.label}</button>
       ))}
     </div>
   );

@@ -28,15 +28,18 @@ e não mostrava quanto cada parte realmente rendeu. O app responde a três pergu
 
 | Aba | O que faz |
 |---|---|
-| **Início** | Divide o valor que sobrou entre os "buckets" pela porcentagem de cada um, assistente que sugere quanto aportar da sobra do mês, meta da reserva de emergência, **previsto x realizado** dos aportes, **saldo projetado até o fim do mês**, aviso de **orçamento estourado**, aviso de **Selic/CDI novos do Banco Central**, patrimônio total, rendimento, meta e gráficos |
-| **FIIs e Ações** | Compra e venda, preço médio, cotação automática (Yahoo Finance), dividendos recebidos e calendário de dividendos |
+| **Início** | Três abas para não misturar tudo: **Este mês** (quanto sobrou e para onde vai, assistente de aporte, previsto x realizado, saldo até o fim do mês, avisos de orçamento e de Selic/CDI novos), **Carteira** (patrimônio, onde está o dinheiro comparado com o plano e **patrimônio líquido**: investimentos menos dívidas) e **Metas** (meta de patrimônio e reserva de emergência) |
+| **FIIs e Ações** | Compra e venda, preço médio, cotação automática (Yahoo Finance), **dividend yield** dos últimos 12 meses e sobre o preço pago (*yield on cost*), renda mensal estimada e calendário de dividendos |
 | **Saques e gastos** | Histórico com filtro, gráfico por categoria e exportação CSV |
-| **Gastos mensais** | Planilha por quinzena (dia 15 e dia 30) com "duplicar mês" para até 12 meses contas fixas (📌) que se repetem sozinhas, parcelas com fim, categorias com gráfico, **orçamento por categoria** (aviso a 80% e ao passar do limite), **simulador "antecipar parcelas x investir"** e marcação de contas pagas |
+| **Gastos mensais** | Planilha por quinzena (dia 15 e dia 30) com "duplicar mês" para até 12 meses contas fixas (📌) que se repetem sozinhas, parcelas com fim, categorias com gráfico, **orçamento por categoria** (aviso a 80% e ao passar do limite), um único **resumo do mês** (sobra, % da renda em contas, dia 15 x dia 30) e marcação de contas pagas |
 | **Relatório** | Lançamentos por dia, semana ou mês, evolução do patrimônio e CSV |
 | **Fechamento do mês** | Resumo do mês comparado com o anterior: entradas, contas e sobra, gastos por categoria contra o orçamento, aportes previsto x realizado, saques e variação do patrimônio. Botão **Imprimir / PDF** |
 | **Projeção** | Simulação de 1 a 10 anos a partir do patrimônio atual, **descontando a inflação** (IPCA do Banco Central) e **metas de R$ 10 mil, 100 mil, 500 mil e 1 milhão** |
+| **Simuladores** | **Antecipar parcelas** (juros economizados antecipando ou quitando, e se vale mais antecipar ou investir), **consignado** (parcela, CET, IOF e margem do salário), **aposentadoria** (quanto juntar com a regra dos 4%) e **comparador** Tesouro x CDB x LCI x FIIs x ações já sem o IR |
 | **Gerenciar ativos** | Buckets, taxas (CDI, Selic, Fed, personalizada), bucket protegido e rebalanceamento automático para 100% |
 | **Backup** | Exportar/restaurar `.json` (dados **e configurações**), **backup com senha** (AES-256) e backup automático diário numa pasta escolhida |
+
+**Busca rápida:** `Ctrl + K` (ou o botão *Buscar* no menu) abre uma busca por aba, conta, ativo ou simulador. O menu lateral é agrupado em *Dia a dia*, *Análises* e *Ajustes*.
 
 Também tem tema claro/escuro, layout responsivo (menu lateral no computador, barra inferior no
 celular), confirmação antes de excluir e botão "Desfazer".
@@ -62,10 +65,11 @@ celular), confirmação antes de excluir e botão "Desfazer".
 | Estilo | **Tailwind CSS** | Tema claro/escuro com variáveis CSS (*design tokens*) |
 | Dados | **IndexedDB** via **Dexie** | Banco que já vem no navegador: funciona offline e os dados não saem do computador |
 | Reatividade | `dexie-react-hooks` (`useLiveQuery`) | A tela atualiza sozinha quando o banco muda |
-| Gráficos | **Recharts** | Gráficos de pizza, linha e área |
+| Gráficos | **Recharts** | Linha e área com estilo único em `charts/theme.js`; composição da carteira como barra empilhada (mais fácil de comparar que pizza) |
 | Ícones | **lucide-react** | |
 | Testes | **Vitest** + `fake-indexeddb` | Testa cálculos e banco sem abrir navegador |
 | Testes de interface | **Playwright** | Abre o app no Chromium e testa os fluxos como um usuário |
+| Qualidade | **ESLint** + **Prettier** | O ESLint acha erros comuns (variável sem uso, hook no lugar errado); o Prettier deixa a formatação igual em todo arquivo |
 
 ## Como rodar
 
@@ -88,6 +92,8 @@ Outros comandos:
 ```bash
 npm test           # testes automáticos
 npm run test:e2e   # testes de interface (Playwright)
+npm run lint       # ESLint
+npm run format     # formata o código com o Prettier
 npm run build      # versão de produção em dist/
 ```
 
@@ -150,9 +156,10 @@ npm run test:e2e   # testes de interface (Playwright); na 1ª vez: npx playwrigh
 
 Os testes também rodam sozinhos no GitHub Actions a cada push
 ([`.github/workflows/testes.yml`](.github/workflows/testes.yml)): os de lógica duas vezes (fuso UTC e
-fuso de Brasília, para pegar erros de data que só aparecem em um deles) e os de interface no Chromium.
+fuso de Brasília, para pegar erros de data que só aparecem em um deles), os de interface no Chromium
+e um job de qualidade que roda o ESLint e confere a formatação do Prettier.
 
-**77 testes de lógica** (Vitest) cobrindo:
+**118 testes de lógica** (Vitest) cobrindo:
 
 - juros compostos diários e troca de taxa no meio do período;
 - conversão e rendimento em dólar;
@@ -167,22 +174,25 @@ fuso de Brasília, para pegar erros de data que só aparecem em um deles) e os d
 - backup com senha (senha errada, arquivo alterado, senha curta);
 - simulador de antecipar parcelas x investir (valor presente e IR regressivo);
 - fechamento do mês (comparação com o mês anterior, aportes e patrimônio);
-- nomes com acento ou maiúscula diferente ("MÃE" e "Mae" são a mesma conta).
+- nomes com acento ou maiúscula diferente ("MÃE" e "Mae" são a mesma conta);
+- juros economizados ao antecipar ou quitar, consignado (Price, CET e IOF), aposentadoria e comparador de investimentos com IR;
+- dividend yield por ativo, patrimônio líquido, resumo da planilha e busca rápida.
 
-**7 testes de interface** (Playwright, em [`e2e/`](e2e)) que abrem o app e clicam como um usuário:
-plano de aportes, aviso de Selic nova, orçamento estourado, simulador de parcelas, projeção com metas, fechamento do mês e backup com senha.
+**11 testes de interface** (Playwright, em [`e2e/`](e2e)) que abrem o app e clicam como um usuário:
+plano de aportes, aviso de Selic nova, orçamento estourado, simulador de parcelas, projeção com metas, fechamento do mês, backup com senha,
+busca com Ctrl+K, abas do Início, aposentadoria e comparador.
 As respostas do Banco Central e do Yahoo são simuladas, então os testes não dependem da internet.
 
 ## Estrutura do código
 
 ```
 src/
-  lib/          finance.js (cálculos), dates.js, csv.js + testes
+  lib/          cálculos puros + testes: finance.js, debt.js, loan.js, retirement.js, compare.js, stocks.js, networth.js, sheet.js…
   db/           database.js (tabelas Dexie), backup.js, expenses.js + testes
   hooks/        useFinanceData, useExpenses, useAutoBackup (ligam banco e tela)
   services/     quotes.js (Yahoo / dólar), autoBackup.js
   pages/        uma tela por aba
-  components/   cards, formulários, gráficos e peças de interface
+  components/   cards, formulários, gráficos (charts/), planilha de gastos (gastos/), simuladores/ e peças de interface
 exemplo/        carteira fictícia para testar o app
 docs/           imagens deste README
 ```
