@@ -1,6 +1,6 @@
 // Testes automáticos dos cálculos. Rode com: npm test
 import { describe, expect, it } from 'vitest';
-import { bucketContributions, dollarRealBalance, effectiveRate, goalProjection, realBalance, rebalanceForAdd, rebalanceForDelete, rebalanceForEdit, stockInvested, stockQuantity, stockDividendsReceived, round } from './finance';
+import { milestones, projectionData, realRate, bucketContributions, dollarRealBalance, effectiveRate, goalProjection, realBalance, rebalanceForAdd, rebalanceForDelete, rebalanceForEdit, stockInvested, stockQuantity, stockDividendsReceived, round } from './finance';
 
 describe('taxa efetiva', () => {
   it('Selic usa a taxa base', () => expect(effectiveRate({ rate_type: 'selic', base_rate: 14.25 })).toBe(14.25));
@@ -72,4 +72,31 @@ describe('ações e FIIs', () => {
 describe('meta', () => {
   it('sem juros: 1000 por mês para 10.000 leva 10 meses', () => expect(goalProjection(0, 1000, 0, 10000)).toBe(10));
   it('meta já batida retorna 0', () => expect(goalProjection(500, 0, 0, 100)).toBe(0));
+});
+
+describe('projeção com inflação e metas', () => {
+  it('taxa real pela equação de Fisher (não é só subtrair)', () => {
+    expect(round(realRate(14, 4.5))).toBe(9.09);
+    expect(realRate(5, 5)).toBe(0);
+  });
+  it('projeção começa do saldo atual e aceita taxa no lugar da cadastrada', () => {
+    const buckets = [{ id: 'a', name: 'A', percentage: 100, base_rate: 0 }];
+    const rows = projectionData(buckets, 100, 2, { start: { a: 1000 } });
+    expect(rows[1].Total).toBe(1200);
+    const withRate = projectionData(buckets, 0, 12, { start: { a: 1000 }, rates: { a: 12 } });
+    expect(withRate[11].Total).toBe(1120);
+  });
+  it('total em valor de hoje desconta a inflação', () => {
+    const rows = projectionData([{ id: 'a', name: 'A', percentage: 100, base_rate: 10 }], 0, 12, { start: { a: 1000 }, inflation: 10 });
+    expect(rows[11].Total).toBe(1100);
+    expect(rows[11]['Total em valor de hoje']).toBe(1000);
+  });
+  it('metas: sem juros e sem inflação, R$600/mês leva 17 meses para R$10 mil', () => {
+    const [m10] = milestones(0, 600, 0, 0);
+    expect(m10).toMatchObject({ target: 10000, months: 17, monthsReal: 17 });
+  });
+  it('metas: com inflação, a meta em poder de compra de hoje demora mais', () => {
+    const m = milestones(0, 600, 10, 5, [100000])[0];
+    expect(m.monthsReal).toBeGreaterThan(m.months);
+  });
 });

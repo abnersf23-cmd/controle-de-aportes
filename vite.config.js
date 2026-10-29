@@ -15,6 +15,12 @@ const proxy = {
     target: 'https://economia.awesomeapi.com.br',
     changeOrigin: true,
     rewrite: path => path.replace(/^\/api\/dolar/, '/json/last/USD-BRL')
+  },
+  // Selic, CDI e IPCA: API pública do Banco Central (SGS). Só o código da série sai do computador.
+  '/api/bcb': {
+    target: 'https://api.bcb.gov.br',
+    changeOrigin: true,
+    rewrite: path => path.replace(/^\/api\/bcb/, '/dados/serie')
   }
 };
 
@@ -25,5 +31,5 @@ export default defineConfig({
   server: { host: '127.0.0.1', port: 5173, proxy },
   preview: { host: '127.0.0.1', port: 4173, proxy },
   build: { chunkSizeWarningLimit: 1200 },
-  test: { environment: 'node' }
+  test: { environment: 'node', include: ['src/**/*.test.js'] }
 });

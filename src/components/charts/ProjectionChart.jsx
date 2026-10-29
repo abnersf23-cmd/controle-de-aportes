@@ -2,7 +2,7 @@ import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, X
 import { brl } from '@/lib/finance';
 import { tooltipProps } from './PieCard';
 
-export default function ProjectionChart({ data, buckets }) {
+export default function ProjectionChart({ data, buckets, showReal = false }) {
   return (
     <section className="card p-5">
       <h3 className="font-bold">Crescimento projetado</h3>
@@ -16,6 +16,7 @@ export default function ProjectionChart({ data, buckets }) {
             <Legend wrapperStyle={{ fontSize: 12 }} />
             {buckets.map(b => <Line key={b.id} type="monotone" dataKey={b.name} stroke={b.color} strokeWidth={1.8} dot={false} />)}
             <Line type="monotone" dataKey="Total" stroke="rgb(var(--ink))" strokeWidth={3} dot={false} />
+            {showReal && <Line type="monotone" dataKey="Total em valor de hoje" stroke="rgb(var(--muted))" strokeWidth={2.5} strokeDasharray="6 4" dot={false} />}
           </LineChart>
         </ResponsiveContainer>
       </div>

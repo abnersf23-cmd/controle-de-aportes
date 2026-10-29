@@ -10,3 +10,5 @@ Thumbs.db
 backup-*.json
 dados-*.json
 *.local
+test-results
+playwright-report

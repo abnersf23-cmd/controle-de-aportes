@@ -5,11 +5,22 @@ import { db, TABLES, newId, stamp } from './database';
 
 export const BACKUP_FORMAT = 'controle-aportes-backup';
 
+// Configurações que só valem neste navegador e não entram no backup:
+// a pasta do backup automático (uma autorização do navegador, não dá para salvar em arquivo),
+// as datas dos últimos backups e o "já passei pela tela de boas-vindas".
+const LOCAL_SETTINGS = ['backupDir', 'lastBackup', 'lastAutoBackup', 'backupSnooze', 'onboarded'];
+const portable = rows => rows.filter(s => s && typeof s.key === 'string' && !LOCAL_SETTINGS.includes(s.key));
+
+// Versão 2: o backup também leva as configurações (assistente, orçamento, plano de aportes,
+// cotações e taxas salvas). Backups da versão 1 continuam sendo aceitos.
 export async function exportBackup() {
   const data = {};
   for (const t of TABLES) data[t] = await db[t].toArray();
-  return { format: BACKUP_FORMAT, version: 1, exported_at: stamp(), data };
+  return { format: BACKUP_FORMAT, version: 2, exported_at: stamp(), data, settings: portable(await db.settings.toArray()) };
 }
+
+// Configurações do arquivo, ou null se ele não tiver (backup antigo ou do Base44).
+export const backupSettings = json => (json?.format === BACKUP_FORMAT && Array.isArray(json.settings) ? portable(json.settings) : null);
 
 // Aceita o backup deste app e também o arquivo exportado do Base44
 // (que usa os nomes das entidades: Bucket, MonthlyRecord, ...).
@@ -36,11 +47,17 @@ function clean(row) {
 
 export async function importBackup(json) {
   const data = normalizeBackup(json);
+  const settings = backupSettings(json);
   // transaction: ou importa tudo, ou nada (se der erro no meio, nada é apagado).
-  await db.transaction('rw', TABLES.map(t => db[t]), async () => {
+  await db.transaction('rw', [...TABLES.map(t => db[t]), db.settings], async () => {
     for (const t of TABLES) {
       await db[t].clear();
       if (data[t].length) await db[t].bulkPut(data[t]);
+    }
+    // Arquivo sem configurações: mantém as atuais. Com configurações: troca pelas do arquivo.
+    if (settings) {
+      await db.settings.bulkDelete(portable(await db.settings.toArray()).map(s => s.key));
+      if (settings.length) await db.settings.bulkPut(settings);
     }
   });
   await db.settings.put({ key: 'onboarded', value: true });
