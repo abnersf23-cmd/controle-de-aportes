@@ -1,6 +1,6 @@
 // Testes automáticos dos cálculos. Rode com: npm test
 import { describe, expect, it } from 'vitest';
-import { milestones, projectionData, realRate, bucketContributions, dollarRealBalance, effectiveRate, goalProjection, realBalance, rebalanceForAdd, rebalanceForDelete, rebalanceForEdit, stockInvested, stockQuantity, stockDividendsReceived, round } from './finance';
+import { milestones, projectionData, realRate, bucketContributions, dollarRealBalance, effectiveRate, goalProjection, realBalance, rebalanceForAdd, rebalanceForDelete, rebalanceForEdit, stockInvested, stockQuantity, stockDividendsReceived, round, splitZeroBuckets } from './finance';
 
 describe('taxa efetiva', () => {
   it('Selic usa a taxa base', () => expect(effectiveRate({ rate_type: 'selic', base_rate: 14.25 })).toBe(14.25));
@@ -72,6 +72,26 @@ describe('ações e FIIs', () => {
 describe('meta', () => {
   it('sem juros: 1000 por mês para 10.000 leva 10 meses', () => expect(goalProjection(0, 1000, 0, 10000)).toBe(10));
   it('meta já batida retorna 0', () => expect(goalProjection(500, 0, 0, 100)).toBe(0));
+});
+
+describe('buckets zerados na tela inicial', () => {
+  const zerado = { b: { id: 'a', percentage: 10 }, bal: { balance: 0 } };
+  const semPct = { b: { id: 'b', percentage: 0 }, bal: { balance: 0 } };
+  const comSaldo = { b: { id: 'c', percentage: 0 }, bal: { balance: 150 } };
+  const ids = list => list.map(i => i.b.id);
+  it('oculta quem tem saldo zero', () => {
+    const r = splitZeroBuckets([zerado, semPct, comSaldo]);
+    expect(ids(r.visible)).toEqual(['c']);
+    expect(ids(r.hidden)).toEqual(['a', 'b']);
+  });
+  it('volta a aparecer quando recebe valor', () => {
+    expect(ids(splitZeroBuckets([{ ...zerado, bal: { balance: 0.01 } }]).visible)).toEqual(['a']);
+  });
+  it('aparece ao distribuir um aporte se tiver percentual', () => {
+    const r = splitZeroBuckets([zerado, semPct], 1000);
+    expect(ids(r.visible)).toEqual(['a']);
+    expect(ids(r.hidden)).toEqual(['b']);
+  });
 });
 
 describe('projeção com inflação e metas', () => {

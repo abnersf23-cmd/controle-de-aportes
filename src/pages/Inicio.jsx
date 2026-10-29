@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowRight, PiggyBank, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, PiggyBank, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 import BucketCard from '@/components/cards/BucketCard';
 import CategoryCard from '@/components/cards/CategoryCard';
 import StockBucketCard from '@/components/cards/StockBucketCard';
@@ -23,7 +23,7 @@ import WithdrawalForm from '@/components/forms/WithdrawalForm';
 import ExtraForm from '@/components/forms/ExtraForm';
 import RateForm from '@/components/forms/RateForm';
 import DollarRateForm from '@/components/forms/DollarRateForm';
-import { brl, monthKey, bucketBalance, daysSince, totalBalance, stockTotal, bucketCategory, withdrawalBrl, round, stockMarketValue, stockNetAmount } from '@/lib/finance';
+import { brl, monthKey, bucketBalance, daysSince, totalBalance, stockTotal, bucketCategory, withdrawalBrl, round, stockMarketValue, stockNetAmount, splitZeroBuckets } from '@/lib/finance';
 
 const titles = { extra: 'Aporte avulso', withdraw: 'Registrar saque ou gasto', rate: 'Atualizar taxa', dollar: 'Atualizar cotação do dólar', edit: 'Editar bucket', mark: 'Confirmar aporte em dólar', add: 'Novo bucket' };
 
@@ -35,6 +35,7 @@ export default function Inicio({ data, goTo }) {
   const [input, setInput] = useState('');
   const [total, setTotal] = useState(0);
   const [modal, setModal] = useState(null); // { kind, bucket }
+  const [showZero, setShowZero] = useState(false);
   const close = () => setModal(null);
 
   const current = records.find(r => r.month === monthKey());
@@ -51,7 +52,8 @@ export default function Inicio({ data, goTo }) {
 
   const categoryOf = b => b.category || bucketCategory(b.name);
   const cashItem = balances.find(({ b }) => categoryOf(b) === 'Caixa');
-  const groups = balances.filter(i => i !== cashItem).reduce((list, item) => {
+  const { visible, hidden } = splitZeroBuckets(balances.filter(i => i !== cashItem), total);
+  const groups = (showZero ? [...visible, ...hidden] : visible).reduce((list, item) => {
     const name = categoryOf(item.b), g = list.find(x => x.name === name);
     if (g) g.items.push(item); else list.push({ name, items: [item] });
     return list;
@@ -116,6 +118,9 @@ export default function Inicio({ data, goTo }) {
           {stockBucket && <StockBucketCard bucket={stockBucket} stocks={stocks} quotes={quotes} onOpen={() => goTo('acoes')} />}
           {groups.map(g => <CategoryCard key={g.name} name={g.name} items={g.items} renderBucket={renderBucket} onAdd={() => setModal({ kind: 'add', bucket: { category: g.name } })} />)}
         </div>
+        {hidden.length > 0 && <button type="button" onClick={() => setShowZero(v => !v)} className="mt-3 flex items-center gap-2 text-sm font-semibold text-muted transition hover:text-accent">
+          {showZero ? <><EyeOff size={16} /> Ocultar buckets zerados</> : <><Eye size={16} /> Mostrar {hidden.length} {hidden.length === 1 ? 'bucket zerado' : 'buckets zerados'}</>}
+        </button>}
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
