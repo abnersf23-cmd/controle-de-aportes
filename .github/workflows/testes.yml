@@ -13,6 +13,28 @@ permissions:
   contents: read
 
 jobs:
+  # Qualidade do código: ESLint (erros comuns) e Prettier (formatação igual em todo arquivo).
+  qualidade:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar o Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Rodar o ESLint
+        run: npm run lint
+
+      - name: Conferir a formatação (Prettier)
+        run: npm run format:check
+
   testes:
     runs-on: ubuntu-latest
     strategy:

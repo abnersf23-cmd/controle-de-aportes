@@ -34,13 +34,13 @@ export function readJsonFile(file) {
 function AutoBackupCard() {
   const run = useAction();
   const { status, folderName, lastAuto, refresh } = useBackupFolder();
+  const pick = usePickFolder(refresh); // hooks sempre antes de qualquer return
   if (!autoBackupSupported()) return (
     <section className="card space-y-2 p-5 text-sm">
       <h2 className="flex items-center gap-2 font-bold"><FolderSync size={18} className="text-muted" /> Backup automático</h2>
       <p className="text-muted">Este navegador não permite gravar numa pasta automaticamente (só Chrome e Edge têm esse recurso). Por isso o app mostra um lembrete no topo quando o último backup passar de 7 dias.</p>
     </section>
   );
-  const pick = usePickFolder(refresh);
   return (
     <section className="card space-y-3 p-5">
       <h2 className="flex items-center gap-2 font-bold"><FolderSync size={18} className="text-good" /> Backup automático</h2>
