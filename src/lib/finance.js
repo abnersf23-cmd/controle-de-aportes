@@ -183,18 +183,28 @@ export function splitZeroBuckets(items = [], total = 0) {
 
 // ---------- Projeção ----------
 export const monthlyEquivalent = annual => (Math.pow(1 + (Number(annual) || 0) / 100, 1 / 12) - 1) * 100;
-export function projectionData(buckets, monthly, months = 12) {
-  const balances = Object.fromEntries(buckets.map(bucket => [bucket.id, 0]));
+// Taxa REAL: quanto o dinheiro cresce acima da inflação (equação de Fisher).
+// (1 + nominal) / (1 + inflação) − 1. Ex.: 14% de juros com 4,5% de inflação = 9,09% reais, não 9,5%.
+export const realRate = (nominal, inflation = 0) => ((1 + (Number(nominal) || 0) / 100) / (1 + (Number(inflation) || 0) / 100) - 1) * 100;
+// Traz um valor do futuro para o poder de compra de hoje.
+export const toTodayMoney = (value, inflation, months) => value / Math.pow(1 + (Number(inflation) || 0) / 100, months / 12);
+
+// opções: start = saldo inicial por bucket ({ id: valor }), rates = taxa anual por bucket que
+// substitui a taxa cadastrada (ex.: retorno esperado de FIIs e ações), inflation = % a.a. para
+// calcular também o total no poder de compra de hoje.
+export function projectionData(buckets, monthly, months = 12, { start = {}, rates = {}, inflation = 0 } = {}) {
+  const balances = Object.fromEntries(buckets.map(bucket => [bucket.id, Number(start[bucket.id]) || 0]));
   const dollarRate = buckets.find(b => b.rate_type === 'fed')?.current_dollar_rate || 1;
   return Array.from({ length: months }, (_, index) => {
     const row = { month: `Mês ${index + 1}` };
     buckets.forEach(bucket => {
-      const mRate = monthlyEquivalent(effectiveRate(bucket));
+      const mRate = monthlyEquivalent(rates[bucket.id] ?? effectiveRate(bucket));
       balances[bucket.id] = (balances[bucket.id] + monthly * bucket.percentage / 100) * (1 + mRate / 100);
       row[bucket.name] = round(balances[bucket.id]);
       if (bucket.rate_type === 'fed') row[`${bucket.name} (USD)`] = round(balances[bucket.id] / dollarRate);
     });
     row.Total = round(Object.values(balances).reduce((sum, value) => sum + value, 0));
+    if (inflation) row['Total em valor de hoje'] = round(toTodayMoney(row.Total, inflation, index + 1));
     return row;
   });
 }
@@ -256,10 +266,11 @@ export function totalBalance(buckets, records, extras, withdrawals, asOf = new D
   const bucketTotal = buckets.filter(b => b.kind !== 'stocks').reduce((sum, b) => sum + bucketBalance(b, records, extras, withdrawals, asOf).balance, 0);
   return bucketTotal + stockTotalAsOf(stocks, asOf);
 }
-export function weightedAverageRate(buckets = []) {
+// Taxa média da carteira, pesada pelo % de cada bucket. `rates` substitui a taxa de algum bucket.
+export function weightedAverageRate(buckets = [], rates = {}) {
   const totalPct = buckets.reduce((s, b) => s + Number(b.percentage || 0), 0);
   if (!totalPct) return 0;
-  return buckets.reduce((s, b) => s + effectiveRate(b) * Number(b.percentage || 0), 0) / totalPct;
+  return buckets.reduce((s, b) => s + (rates[b.id] ?? effectiveRate(b)) * Number(b.percentage || 0), 0) / totalPct;
 }
 export function goalProjection(currentBalance, monthlyContribution, annualRate, target) {
   if (target <= 0 || currentBalance >= target) return 0;
@@ -271,6 +282,15 @@ export function goalProjection(currentBalance, monthlyContribution, annualRate, 
   }
   return months >= 600 ? null : months;
 }
+// Metas de patrimônio: em quantos meses cada valor é atingido.
+// months = valor "de nota" (nominal). monthsReal = valor com o poder de compra de hoje: usa a taxa
+// real e supõe que o aporte sobe junto com a inflação (assim ele vale o mesmo todo ano).
+export const MILESTONES = [10000, 100000, 500000, 1000000];
+export function milestones(currentBalance, monthly, annualRate, inflation = 0, targets = MILESTONES) {
+  const real = realRate(annualRate, inflation);
+  return targets.map(target => ({ target, months: goalProjection(currentBalance, monthly, annualRate, target), monthsReal: goalProjection(currentBalance, monthly, real, target) }));
+}
+
 export function patrimonyEvolution(buckets, records, extras, withdrawals, stocks = []) {
   const allDates = [
     ...records.flatMap(r => (r.allocations || []).map(() => `${r.month}-01`)),

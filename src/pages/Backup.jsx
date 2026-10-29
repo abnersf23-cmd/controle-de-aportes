@@ -1,20 +1,24 @@
 import { useRef, useState } from 'react';
-import { Download, FolderSync, HardDrive, ShieldCheck, Upload } from 'lucide-react';
+import { Download, FolderSync, HardDrive, Lock, ShieldCheck, Upload } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Notice, PageHeader } from '@/components/ui/Bits';
+import Modal from '@/components/ui/Modal';
 import { useAction } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/Confirm';
 import { db } from '@/db/database';
 import { exportBackup, importBackup } from '@/db/backup';
 import { downloadFile } from '@/lib/csv';
+import { MIN_PASSWORD, decryptJson, encryptJson, isEncrypted } from '@/lib/crypto';
 import { daysSince } from '@/lib/finance';
 import { today } from '@/lib/dates';
 import { autoBackupSupported, disableFolder, reactivate } from '@/services/autoBackup';
 import { useBackupFolder, usePickFolder } from '@/hooks/useAutoBackup';
 
-export async function downloadBackup() {
+// Com senha, o arquivo sai criptografado (veja src/lib/crypto.js) e com "-protegido" no nome.
+export async function downloadBackup(password) {
   const json = await exportBackup();
-  downloadFile(`backup-controle-aportes-${today()}.json`, JSON.stringify(json, null, 2), 'application/json');
+  const file = password ? await encryptJson(json, password) : json;
+  downloadFile(`backup-controle-aportes-${today()}${password ? '-protegido' : ''}.json`, JSON.stringify(file, null, 2), 'application/json');
   await db.settings.put({ key: 'lastBackup', value: new Date().toISOString() });
 }
 
@@ -61,6 +65,8 @@ export default function Backup() {
   const run = useAction(), confirm = useConfirm();
   const fileRef = useRef(null);
   const [result, setResult] = useState(null);
+  const [protect, setProtect] = useState(false);
+  const [locked, setLocked] = useState(null); // backup com senha esperando a senha para abrir
   const lastBackup = useLiveQuery(async () => (await db.settings.get('lastBackup'))?.value || null, []);
   const counts = useLiveQuery(async () => ({ buckets: await db.buckets.count(), extras: await db.extras.count(), withdrawals: await db.withdrawals.count(), stocks: await db.stocks.count(), expenses: await db.expenses.count() }), []);
   const persisted = useLiveQuery(async () => (navigator.storage?.persisted ? navigator.storage.persisted() : null), []);
@@ -70,8 +76,31 @@ export default function Backup() {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
+    let json;
+    if (!(await run(async () => { json = await readJsonFile(file); }))) return;
+    if (isEncrypted(json)) return setLocked(json);
+    await restore(json);
+  };
+  const restore = async json => {
     if (!(await confirm('Restaurar este backup?', { message: 'Todos os dados atuais do app serão SUBSTITUÍDOS pelos do arquivo. Faça um backup antes, se quiser guardar os atuais.', confirmLabel: 'Substituir dados' }))) return;
-    await run(async () => setResult(await importBackup(await readJsonFile(file))), 'Backup restaurado.');
+    await run(async () => setResult(await importBackup(json)), 'Backup restaurado.');
+  };
+  const onDownload = e => {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const password = protect ? String(form.get('password') || '') : '';
+    return run(async () => {
+      if (protect && password !== form.get('confirm')) throw new Error('As senhas não são iguais.');
+      await downloadBackup(password);
+    }, protect ? 'Backup protegido baixado. Guarde a senha: sem ela o arquivo não abre.' : 'Backup baixado. Guarde o arquivo em local seguro.');
+  };
+  const onUnlock = async e => {
+    e.preventDefault();
+    const password = String(new FormData(e.currentTarget).get('password') || '');
+    let json;
+    if (!(await run(async () => { json = await decryptJson(locked, password); }))) return;
+    setLocked(null);
+    await restore(json);
   };
 
   return (
@@ -83,18 +112,32 @@ export default function Backup() {
       <div className="grid gap-4 md:grid-cols-2">
         <section className="card space-y-3 p-5">
           <h2 className="flex items-center gap-2 font-bold"><Download size={18} className="text-accent" /> Fazer backup</h2>
-          <p className="text-sm text-muted">Baixa um arquivo <code>.json</code> com todos os seus dados. Use-o para restaurar ou levar para outro computador.</p>
-          <button onClick={() => run(downloadBackup, 'Backup baixado. Guarde o arquivo em local seguro.')} className="btn-primary w-full">Baixar backup</button>
+          <p className="text-sm text-muted">Baixa um arquivo <code>.json</code> com todos os seus dados e configurações. Use-o para restaurar ou levar para outro computador.</p>
+          <form onSubmit={onDownload} className="space-y-3">
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={protect} onChange={e => setProtect(e.target.checked)} className="h-4 w-4 accent-[rgb(var(--accent))]" /><Lock size={14} /> Proteger com senha</label>
+            {protect && <div className="space-y-2 rounded-xl bg-surface2 p-3">
+              <input name="password" type="password" required minLength={MIN_PASSWORD} autoComplete="new-password" placeholder={`Senha (mín. ${MIN_PASSWORD} caracteres)`} className="field mt-0" aria-label="Senha do backup" />
+              <input name="confirm" type="password" required minLength={MIN_PASSWORD} autoComplete="new-password" placeholder="Repita a senha" className="field mt-0" aria-label="Repita a senha" />
+              <p className="text-xs text-faint">O arquivo fica ilegível sem a senha (AES-256). A senha não é guardada: se esquecer, não dá para recuperar.</p>
+            </div>}
+            <button className="btn-primary w-full">{protect ? 'Baixar backup protegido' : 'Baixar backup'}</button>
+          </form>
         </section>
         <section className="card space-y-3 p-5">
           <h2 className="flex items-center gap-2 font-bold"><Upload size={18} className="text-info" /> Restaurar / importar</h2>
-          <p className="text-sm text-muted">Aceita um backup deste app ou o arquivo exportado do Base44.</p>
+          <p className="text-sm text-muted">Aceita um backup deste app (com ou sem senha) ou o arquivo exportado do Base44.</p>
           <input ref={fileRef} type="file" accept=".json,application/json" onChange={onFile} className="hidden" />
           <button onClick={() => fileRef.current?.click()} className="btn-secondary w-full">Escolher arquivo…</button>
           {result && <p className="text-xs text-good">Importado: {result.buckets} buckets, {result.extras} aportes avulsos, {result.withdrawals} saques, {result.stocks} ativos, {result.expenses} meses de gastos.</p>}
         </section>
       </div>
       <AutoBackupCard />
+      <Modal open={!!locked} title="Backup protegido" subtitle="Digite a senha usada ao criar o arquivo" onClose={() => setLocked(null)}>
+        <form onSubmit={onUnlock} className="space-y-3">
+          <input name="password" type="password" required autoFocus autoComplete="current-password" placeholder="Senha" className="field mt-0" aria-label="Senha do backup" />
+          <div className="flex justify-end gap-2"><button type="button" onClick={() => setLocked(null)} className="btn-secondary">Cancelar</button><button className="btn-primary">Abrir</button></div>
+        </form>
+      </Modal>
       <section className="card space-y-2 p-5 text-sm">
         <h2 className="flex items-center gap-2 font-bold"><HardDrive size={18} className="text-muted" /> Onde estão meus dados?</h2>
         <p className="text-muted">No banco <strong>IndexedDB</strong> do navegador, no endereço <code>localhost</code>. Nada é enviado para a internet; as únicas chamadas externas são as cotações (só o ticker e o par USD-BRL).</p>

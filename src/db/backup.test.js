@@ -24,6 +24,22 @@ describe('backup', () => {
     await importBackup(JSON.parse(JSON.stringify(json)));
     expect(await db.buckets.count()).toBe(1);
   });
+  it('leva as configurações no backup, menos as que só valem neste navegador', async () => {
+    await db.settings.bulkPut([{ key: 'assistant', value: { keepPct: 30 } }, { key: 'backupDir', value: 'pasta' }]);
+    const json = JSON.parse(JSON.stringify(await exportBackup()));
+    expect(json.version).toBe(2);
+    expect(json.settings.map(s => s.key)).toContain('assistant');
+    expect(json.settings.map(s => s.key)).not.toContain('backupDir');
+    await db.settings.put({ key: 'assistant', value: { keepPct: 99 } });
+    await importBackup(json);
+    expect((await db.settings.get('assistant')).value.keepPct).toBe(30);
+    expect((await db.settings.get('backupDir')).value).toBe('pasta');
+  });
+  it('backup antigo, sem configurações, mantém as configurações atuais', async () => {
+    await db.settings.put({ key: 'assistant', value: { keepPct: 25 } });
+    await importBackup(sample);
+    expect((await db.settings.get('assistant')).value.keepPct).toBe(25);
+  });
   it('recusa arquivo sem buckets', async () => {
     await expect(importBackup({ entities: {} })).rejects.toThrow();
   });

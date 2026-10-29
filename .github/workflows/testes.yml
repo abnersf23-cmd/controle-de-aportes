@@ -40,3 +40,35 @@ jobs:
 
       - name: Conferir se o app compila
         run: npm run build
+
+  # Testes de interface: abrem o app no Chromium e clicam como um usuário (Playwright).
+  interface:
+    runs-on: ubuntu-latest
+    env:
+      TZ: America/Sao_Paulo
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar o Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Instalar o navegador do Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Rodar os testes de interface
+        run: npm run test:e2e
+
+      - name: Guardar o relatório se falhar
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-falhas
+          path: test-results/
+          retention-days: 7
