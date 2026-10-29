@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, Circle, Copy, CopyPlus, Pin, Plus, Trash2 } from 'lucide-react';
+import { Archive, CheckCircle2, Circle, Copy, CopyPlus, FileDown, Pin, Plus, Trash2 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import BudgetCard from '@/components/cards/BudgetCard';
 import DebtSimulator from '@/components/cards/DebtSimulator';
@@ -7,6 +7,9 @@ import { Field, Notice, PageHeader } from '@/components/ui/Bits';
 import { useConfirm } from '@/components/ui/Confirm';
 import { useAction } from '@/components/ui/Toast';
 import useExpenses from '@/hooks/useExpenses';
+import { useClosedMonths } from '@/hooks/useMonthClose';
+import { downloadReports } from '@/services/monthReports';
+import { isArchived } from '@/lib/monthClose';
 import { db, newId } from '@/db/database';
 import { applyFixed, fixedEnd, freshCopy, parcelNumber } from '@/db/expenses';
 import { addMonths, monthKey } from '@/lib/dates';
@@ -40,13 +43,17 @@ export default function GastosMensais() {
   const [dupOpen, setDupOpen] = useState(false);
   const run = useAction();
   const confirm = useConfirm();
-  // Mês anterior + atual + 5 à frente (o original mostrava só os 6 próximos).
+  const { closed } = useClosedMonths();
+  const [showArchived, setShowArchived] = useState(false);
+  const [month, setMonth] = useState(monthKey());
   // Abas: mês anterior + atual + 5 à frente, mais qualquer mês que já tenha dados.
-  const months = useMemo(() => {
+  // Meses fechados (relatório já salvo, a partir do dia 2) ficam ocultos, mas os dados continuam no banco.
+  const allMonths = useMemo(() => {
     const base = Array.from({ length: 7 }, (_, i) => addMonths(monthKey(), i - 1));
     return [...new Set([...base, ...records.map(r => r.month)])].sort();
   }, [records]);
-  const [month, setMonth] = useState(monthKey());
+  const archived = allMonths.filter(m => isArchived(m, { records, closed }));
+  const months = showArchived ? allMonths : allMonths.filter(m => m === month || !archived.includes(m));
   const [data, setData] = useState(empty);
   const record = records.find(r => r.month === month);
   const loadedFor = useRef(null);
@@ -117,8 +124,10 @@ export default function GastosMensais() {
         <button onClick={() => { commit(); setDupOpen(true); }} disabled={!data.items.some(i => String(i.name || '').trim())} className="btn-primary"><CopyPlus size={16} /> Duplicar mês</button>
       </PageHeader>
       <div className="flex gap-1.5 overflow-x-auto pb-1">
-        {months.map(m => <button key={m} onClick={() => { loadedFor.current = null; setMonth(m); }} className={`whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold transition ${m === month ? 'bg-accent text-white' : 'border border-line bg-surface text-muted hover:text-ink'}`}>{monthLabel(m)}{m === monthKey() ? ' · atual' : ''}</button>)}
+        {months.map(m => <button key={m} onClick={() => { loadedFor.current = null; setMonth(m); }} className={`whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold transition ${m === month ? 'bg-accent text-white' : 'border border-line bg-surface text-muted hover:text-ink'}`}>{monthLabel(m)}{m === monthKey() ? ' · atual' : ''}{closed[m] ? ' · fechado' : ''}</button>)}
+        {archived.length > 0 && <button onClick={() => { if (showArchived && archived.includes(month)) { loadedFor.current = null; setMonth(monthKey()); } setShowArchived(v => !v); }} className="btn-ghost whitespace-nowrap py-2 text-xs"><Archive size={14} /> {showArchived ? 'Ocultar meses fechados' : `Ver meses anteriores (${archived.length})`}</button>}
       </div>
+      {closed[month] && <Notice tone="good" icon={Archive}>{monthLabel(month)} já foi fechado: o relatório foi {closed[month].how === 'download' ? 'baixado' : 'salvo na pasta'} em {new Date(closed[month].reportAt).toLocaleDateString('pt-BR')}. Se você mudar algo aqui, baixe o relatório de novo. <button onClick={() => run(async () => { await commit(); await downloadReports([month], { mark: false }); }, 'Relatório baixado (HTML e CSV).')} className="ml-1 inline-flex items-center gap-1 font-semibold underline"><FileDown size={14} /> Baixar relatório</button></Notice>}
       <Notice tone="info">Cada célula é salva quando você sai dela. Clique no 📌 de uma conta para ela se repetir nos próximos meses, e no ○ do valor quando pagar.</Notice>
       <div className="grid items-start gap-4 lg:grid-cols-[1.7fr_1fr]">
         <section className="card overflow-hidden">

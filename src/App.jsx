@@ -4,7 +4,9 @@ import { BarChart3, CalendarCheck, CalendarRange, Database, Home, LineChart, Moo
 import { db } from '@/db/database';
 import useFinanceData from '@/hooks/useFinanceData';
 import useAutoBackup from '@/hooks/useAutoBackup';
+import useMonthClose from '@/hooks/useMonthClose';
 import BackupBanner from '@/components/BackupBanner';
+import MonthCloseBanner from '@/components/MonthCloseBanner';
 import Inicio from '@/pages/Inicio';
 import Acoes from '@/pages/Acoes';
 import Saques from '@/pages/Saques';
@@ -47,6 +49,7 @@ export default function App() {
   const data = useFinanceData();
   const [tab, setTab] = useState(readTab);
   useAutoBackup(!!onboarded);
+  useMonthClose(!!onboarded);
   useEffect(() => {
     const onHash = () => setTab(readTab());
     window.addEventListener('hashchange', onHash);
@@ -96,6 +99,7 @@ export default function App() {
 
       <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:pb-10 lg:pt-8">
         {tab !== 'backup' && <div className="print:hidden"><BackupBanner goTo={goTo} /></div>}
+        <div className="print:hidden"><MonthCloseBanner /></div>
         <Page data={data} goTo={goTo} />
       </main>
 
