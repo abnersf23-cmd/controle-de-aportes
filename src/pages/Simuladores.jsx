@@ -11,10 +11,10 @@ import { PLAN_DEFAULTS } from '@/lib/plan';
 import { monthKey, totalBalance } from '@/lib/finance';
 
 export const SIMULATORS = [
-  { value: 'antecipar', label: 'Antecipar parcelas', hint: 'Juros que você economiza antecipando ou quitando' },
-  { value: 'consignado', label: 'Consignado', hint: 'Parcela, CET e margem do salário' },
-  { value: 'aposentadoria', label: 'Aposentadoria', hint: 'Quanto juntar para viver de renda' },
-  { value: 'comparador', label: 'Comparador', hint: 'Tesouro, CDB, LCI, FIIs e ações lado a lado' }
+  { value: 'antecipar', label: 'Antecipar parcelas', hint: 'Vale a pena pagar as parcelas antes? Veja quanto de juros você economiza.' },
+  { value: 'consignado', label: 'Consignado', hint: 'Quanto fica a parcela de um empréstimo consignado e se cabe no seu salário.' },
+  { value: 'aposentadoria', label: 'Aposentadoria', hint: 'Quanto guardar por mês para um dia viver de renda.' },
+  { value: 'comparador', label: 'Onde investir', hint: 'Quanto o mesmo dinheiro rende no Tesouro, CDB, LCI, FIIs e ações, já sem imposto.' }
 ];
 
 // Todas as contas de "e se…?" num lugar só, separadas em abas.
@@ -35,11 +35,7 @@ export default function Simuladores({ data }) {
       <div className="overflow-x-auto pb-1">
         <Segmented value={tab} onChange={setTab} options={SIMULATORS} />
       </div>
-      {tab === 'antecipar' && (
-        <div className="max-w-2xl">
-          <DebtSimulator fixed={fixed} month={monthKey()} />
-        </div>
-      )}
+      {tab === 'antecipar' && <DebtSimulator fixed={fixed} month={monthKey()} />}
       {tab === 'consignado' && <Consignado />}
       {tab === 'aposentadoria' && <Aposentadoria current={current} monthly={plan?.monthly ?? PLAN_DEFAULTS.monthly} />}
       {tab === 'comparador' && <Comparador rates={rates} />}

@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { Scale } from 'lucide-react';
-import Modal from '@/components/ui/Modal';
 import { Field } from '@/components/ui/Bits';
+import { Answer, Figure, More } from '@/components/simuladores/Parts';
 import useMarketRates from '@/hooks/useMarketRates';
 import { interestSavings, simulateAnticipation } from '@/lib/debt';
 import { brl, pct } from '@/lib/finance';
 import { parcelNumber } from '@/db/expenses';
 
-// Lista as contas parceladas do mês e abre o simulador "antecipar parcelas x investir".
+const blank = { parcel: '', remaining: '' };
+
+// "Vale antecipar as parcelas?": quanto de juros você economiza e se é melhor que deixar o dinheiro investido.
+// As contas parceladas dos Gastos mensais aparecem como atalho e já preenchem os campos.
 export default function DebtSimulator({ fixed, month }) {
-  const [open, setOpen] = useState(null);
   const debts = fixed
     .filter(f => f.parcels && f.first && f.start <= month)
     .map(f => {
@@ -17,40 +18,31 @@ export default function DebtSimulator({ fixed, month }) {
       return { id: f.id, name: f.name, parcel: (Number(f.vale) || 0) + (Number(f.pagamento) || 0), remaining: f.parcels - now, now, total: f.parcels };
     })
     .filter(d => d.now >= 1 && d.remaining > 0);
+  const [picked, setPicked] = useState(debts[0] || blank);
 
   return (
-    <section className="card space-y-3 p-5">
-      <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted">
-        <Scale size={14} /> Antecipar ou investir?
-      </p>
-      {debts.length ? (
-        <ul className="space-y-1.5 text-sm">
-          {debts.map(d => (
-            <li key={d.id} className="flex items-center gap-2">
-              <span className="flex-1 text-muted">
-                {d.name}{' '}
-                <span className="text-xs text-faint">
-                  {d.now}/{d.total} · faltam {d.remaining}
-                </span>
-              </span>
-              <button className="btn-ghost py-1 text-xs font-semibold text-accent" onClick={() => setOpen(d)}>
-                Simular
+    <div className="space-y-4">
+      {debts.length > 0 && (
+        <section className="card space-y-2 p-4">
+          <p className="text-sm font-semibold text-muted">Suas contas parceladas: escolha uma para preencher</p>
+          <div className="flex flex-wrap gap-1.5">
+            {[...debts, { ...blank, id: 'outra', name: 'Outra dívida' }].map(d => (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => setPicked(d.id === 'outra' ? blank : d)}
+                className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${(picked.id || 'outra') === d.id ? 'border-accent bg-accent/10 text-accent' : 'border-line text-muted hover:text-ink'}`}
+              >
+                {d.name}
+                {d.total && <span className="ml-1 text-xs font-normal opacity-70">faltam {d.remaining}</span>}
               </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-muted">
-          Nenhuma conta parcelada com parcelas pela frente. Marque uma conta com 📌 e defina as parcelas, ou simule outra dívida.
-        </p>
+            ))}
+          </div>
+        </section>
       )}
-      <button className="btn-secondary w-full" onClick={() => setOpen({ name: '', parcel: '', remaining: '' })}>
-        Simular outra dívida
-      </button>
-      <Modal open={!!open} wide title="Antecipar parcelas ou investir?" subtitle={open?.name || 'Outra dívida'} onClose={() => setOpen(null)}>
-        {open && <SimulatorForm debt={open} />}
-      </Modal>
-    </section>
+      {/* key: trocar de conta recomeça o formulário com os valores dela. */}
+      <SimulatorForm key={picked.id || 'outra'} debt={picked} />
+    </div>
   );
 }
 
@@ -59,110 +51,101 @@ function SimulatorForm({ debt }) {
   const [f, setF] = useState({
     parcel: debt.parcel,
     remaining: debt.remaining,
-    count: debt.remaining,
+    count: '',
     debtRate: '',
-    investRate: rates?.cdi?.value ?? '',
+    investRate: rates?.cdi?.value ?? 14.9,
     taxFree: false
   });
   const set = key => e => setF(x => ({ ...x, [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
-  const count = Math.min(Number(f.count) || 0, Number(f.remaining));
-  const hasDebt = Number(f.parcel) > 0 && Number(f.remaining) > 0 && f.debtRate !== '';
-  const s = hasDebt && f.investRate !== '' ? simulateAnticipation({ ...f, count }) : null;
-  const saved = hasDebt ? interestSavings({ ...f, count }) : null;
+  const remaining = Number(f.remaining) || 0;
+  // Em branco = todas as que faltam (quitar).
+  const count = Math.min(f.count === '' ? remaining : Number(f.count) || 0, remaining);
+  const ready = Number(f.parcel) > 0 && remaining > 0 && f.debtRate !== '';
+  const saved = ready ? interestSavings({ ...f, count }) : null;
+  const s = ready && f.investRate !== '' ? simulateAnticipation({ ...f, count }) : null;
+  const all = count === remaining;
+  const noInterest = ready && Number(f.debtRate) === 0;
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Field label="Valor da parcela (R$)">
+    <div className="grid items-start gap-4 lg:grid-cols-[1fr_1.1fr]">
+      <section className="card space-y-4 p-5">
+        <Field label="1. Valor da parcela (R$)">
           <input type="number" min="0" step="0.01" value={f.parcel} onChange={set('parcel')} className="field" />
         </Field>
-        <Field label="Parcelas que faltam">
+        <Field label="2. Quantas parcelas ainda faltam?">
           <input type="number" min="1" step="1" value={f.remaining} onChange={set('remaining')} className="field" />
         </Field>
-        <Field label="Quantas antecipar" hint="As últimas, que têm mais desconto.">
-          <input type="number" min="1" step="1" max={f.remaining} value={f.count} onChange={set('count')} className="field" />
-        </Field>
-        <Field label="Juros do contrato (% ao mês)" hint="Está no contrato ou no app do banco (taxa mensal).">
+        <Field label="3. Juros do contrato (% ao mês)" hint="Está no contrato, no carnê ou no app do banco. Compra parcelada “sem juros”? Digite 0.">
           <input type="number" min="0" step="0.01" value={f.debtRate} onChange={set('debtRate')} placeholder="ex.: 2,5" className="field" />
         </Field>
-        <Field
-          label="Rendimento do investimento (% ao ano)"
-          hint={rates?.cdi ? `Sugestão: CDI de ${pct(rates.cdi.value)}.` : 'Ex.: a taxa do seu Tesouro ou CDB.'}
-        >
-          <input type="number" min="0" step="0.01" value={f.investRate} onChange={set('investRate')} className="field" />
-        </Field>
-        <label className="flex items-center gap-2 self-end pb-3 text-sm">
-          <input type="checkbox" checked={f.taxFree} onChange={set('taxFree')} className="h-4 w-4 accent-[rgb(var(--accent))]" />
-          Investimento isento de IR (LCI/LCA)
-        </label>
-      </div>
-      {saved && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl bg-good/10 p-3 text-sm text-good">
-            <p className="text-xs font-semibold uppercase tracking-wider opacity-80">
-              Antecipando {count} {count === 1 ? 'parcela' : 'parcelas'}
-            </p>
-            <p className="text-xl font-bold">{brl(saved.anticipate)}</p>
-            <p>de juros a menos (paga {brl(saved.anticipateCost)} hoje)</p>
-          </div>
-          <div className="rounded-xl bg-good/10 p-3 text-sm text-good">
-            <p className="text-xs font-semibold uppercase tracking-wider opacity-80">Quitando tudo</p>
-            <p className="text-xl font-bold">{brl(saved.payoff)}</p>
-            <p>
-              de juros a menos (paga {brl(saved.payoffCost)} em vez de {brl(saved.totalLeft)})
-            </p>
-          </div>
-        </div>
-      )}
-      {!s ? (
-        <p className="rounded-xl bg-surface2 p-3 text-sm text-muted">
-          {hasDebt
-            ? 'Preencha o rendimento do investimento para comparar com investir.'
-            : 'Preencha os juros do contrato para ver quanto de juros você economiza.'}
-        </p>
-      ) : (
-        <>
-          <table className="w-full text-sm">
-            <tbody>
-              <tr className="border-b border-line">
-                <td className="py-1.5 text-muted">
-                  {s.count} parcelas de {brl(f.parcel)}
-                </td>
-                <td className="py-1.5 text-right">{brl(s.nominal)}</td>
-              </tr>
-              <tr className="border-b border-line">
-                <td className="py-1.5 text-muted">Para antecipar hoje você paga</td>
-                <td className="py-1.5 text-right font-semibold">{brl(s.cost)}</td>
-              </tr>
-              <tr className="border-b border-line">
-                <td className="py-1.5 text-muted">Se investir esses {brl(s.cost)} até a última parcela</td>
-                <td className="py-1.5 text-right">{brl(s.investFinal)}</td>
-              </tr>
-              <tr>
-                <td className="py-1.5 text-muted">Se antecipar e investir as parcelas que deixou de pagar</td>
-                <td className="py-1.5 text-right">{brl(s.anticipateFinal)}</td>
-              </tr>
-            </tbody>
-          </table>
-          <p
-            className={`rounded-xl p-3 text-sm ${s.better === 'antecipar' ? 'bg-good/10 text-good' : s.better === 'investir' ? 'bg-info/10 text-info' : 'bg-surface2 text-muted'}`}
+        <More>
+          <Field label="Quantas antecipar" hint="Em branco = todas (quitar). As últimas têm mais desconto.">
+            <input type="number" min="1" step="1" max={f.remaining} value={f.count} onChange={set('count')} placeholder="todas" className="field" />
+          </Field>
+          <Field
+            label="Quanto seu dinheiro rende investido (% ao ano)"
+            hint={rates?.cdi ? `Sugestão: CDI de ${pct(rates.cdi.value)}.` : 'Ex.: a taxa do seu Tesouro ou CDB.'}
           >
-            {s.better === 'empate' ? (
-              'Dá praticamente no mesmo.'
-            ) : (
-              <>
-                <strong>{s.better === 'antecipar' ? 'Antecipar' : 'Investir'}</strong> deixa você com {brl(Math.abs(s.advantage))} a mais na data da última
-                parcela.
-              </>
-            )}{' '}
-            A dívida custa {pct(f.debtRate)} ao mês; o investimento rende cerca de {pct(s.investNetMonthly)} ao mês já descontado o IR.
-          </p>
-          <p className="text-xs text-faint">
-            Simulação: supõe taxas constantes e o desconto pelo valor presente (direito garantido pelo Código de Defesa do Consumidor). Antes de antecipar,
-            confira se a reserva de emergência continua cheia: dinheiro usado para quitar não volta se surgir um imprevisto.
-          </p>
-        </>
-      )}
+            <input type="number" min="0" step="0.01" value={f.investRate} onChange={set('investRate')} className="field" />
+          </Field>
+          <label className="flex items-center gap-2 text-sm sm:col-span-2">
+            <input type="checkbox" checked={f.taxFree} onChange={set('taxFree')} className="h-4 w-4 accent-[rgb(var(--accent))]" />O investimento é isento de IR
+            (LCI/LCA)
+          </label>
+        </More>
+      </section>
+
+      <section className="card space-y-3 p-5">
+        {!saved ? (
+          <p className="text-sm text-muted">Preencha a parcela, quantas faltam e os juros do contrato.</p>
+        ) : noInterest ? (
+          <Answer tone="info" title="Sem juros: não vale antecipar">
+            Antecipar não dá desconto. Deixe o dinheiro rendendo e pague as parcelas em dia.
+          </Answer>
+        ) : (
+          <>
+            <Answer
+              tone={!s || s.better !== 'investir' ? 'good' : 'info'}
+              title={`${all ? 'Quitando hoje' : `Antecipando ${count} ${count === 1 ? 'parcela' : 'parcelas'}`}, você economiza ${brl(all ? saved.payoff : saved.anticipate)}`}
+            >
+              {s &&
+                (s.better === 'investir' ? (
+                  <>
+                    Mas o seu investimento rende mais que os juros da dívida: deixar o dinheiro aplicado te deixa com{' '}
+                    <strong>{brl(Math.abs(s.advantage))} a mais</strong>.
+                  </>
+                ) : s.better === 'antecipar' ? (
+                  <>
+                    E vale mais que investir: no fim você fica com <strong>{brl(s.advantage)} a mais</strong> do que se deixasse o dinheiro aplicado.
+                  </>
+                ) : (
+                  'Dá praticamente no mesmo que deixar o dinheiro investido.'
+                ))}
+            </Answer>
+            <div className="grid grid-cols-2 gap-3">
+              {all ? (
+                <>
+                  <Figure label="Para quitar, você paga hoje" value={brl(saved.payoffCost)} />
+                  <Figure label="Pagando as parcelas, seriam" value={brl(saved.totalLeft)} />
+                </>
+              ) : (
+                <>
+                  <Figure
+                    label={`Antecipando ${count} ${count === 1 ? 'parcela' : 'parcelas'}`}
+                    value={brl(saved.anticipateCost)}
+                    hint={`em vez de ${brl(count * Number(f.parcel))}`}
+                  />
+                  <Figure label="Quitando tudo hoje" value={brl(saved.payoffCost)} hint={`em vez de ${brl(saved.totalLeft)}`} />
+                </>
+              )}
+            </div>
+            <p className="text-xs text-faint">
+              A loja ou o banco é obrigado a dar o desconto dos juros quando você antecipa (Código de Defesa do Consumidor). Antes de usar o dinheiro, veja se a
+              reserva de emergência continua cheia.
+            </p>
+          </>
+        )}
+      </section>
     </div>
   );
 }

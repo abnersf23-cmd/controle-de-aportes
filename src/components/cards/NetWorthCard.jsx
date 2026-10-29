@@ -31,7 +31,7 @@ export default function NetWorthCard({ assets }) {
           </div>
           <div>
             <h2 className="font-bold">Patrimônio líquido</h2>
-            <p className="text-sm text-muted">Investimentos menos dívidas</p>
+            <p className="text-sm text-muted">Quanto é seu de verdade, tirando as dívidas</p>
           </div>
         </div>
         <button onClick={() => setEditing(true)} className="btn-ghost" aria-label="Editar outras dívidas" title="Outras dívidas">
@@ -39,34 +39,51 @@ export default function NetWorthCard({ assets }) {
         </button>
       </div>
       <p className={`text-3xl font-bold ${nw.net < 0 ? 'text-bad' : ''}`}>{brl(nw.net)}</p>
-      <div className="space-y-1.5 text-sm">
+      {/* A conta de cabeça, em uma linha: o que você tem − o que deve = o que é seu de verdade. */}
+      <div className="space-y-1 rounded-xl bg-surface2 p-3 text-sm">
         <div className="flex justify-between">
-          <span className="text-muted">Investido</span>
+          <span className="text-muted">Você tem investido</span>
           <strong>{brl(nw.assets)}</strong>
         </div>
-        {parcels.map(d => (
-          <div key={d.id} className="flex justify-between">
-            <span className="text-muted">
-              − {d.name}{' '}
-              <span className="text-xs text-faint">
-                ({d.left} × {brl(d.parcel)})
-              </span>
-            </span>
-            <span className="text-bad">{brl(d.amount)}</span>
-          </div>
-        ))}
-        {others.map(d => (
-          <div key={d.id} className="flex justify-between">
-            <span className="text-muted">− {d.name || 'Dívida'}</span>
-            <span className="text-bad">{brl(d.amount)}</span>
-          </div>
-        ))}
-        {!parcels.length && !others.length && (
-          <p className="text-xs text-faint">
-            Nenhuma dívida: parcelas com 📌 nos Gastos mensais entram sozinhas. Outras (cartão, empréstimo) você adiciona no lápis.
-          </p>
-        )}
+        <div className="flex justify-between">
+          <span className="text-muted">− Você ainda deve</span>
+          <strong className={nw.owed > 0 ? 'text-bad' : 'text-muted'}>{brl(nw.owed)}</strong>
+        </div>
+        <div className="flex justify-between border-t border-line pt-1">
+          <span className="font-semibold">= É seu de verdade</span>
+          <strong>{brl(nw.net)}</strong>
+        </div>
       </div>
+      <p className="text-sm text-muted">
+        {nw.owed > 0
+          ? `É diferente do total da carteira (${brl(nw.assets)}) porque desconta os ${brl(nw.owed)} que você ainda vai pagar. Se você quitasse tudo hoje, sobraria este valor.`
+          : 'Igual ao total da carteira, porque você não tem dívidas cadastradas.'}
+      </p>
+      {(parcels.length > 0 || others.length > 0) && (
+        <details className="text-sm">
+          <summary className="cursor-pointer font-semibold text-muted hover:text-ink">O que entra em &quot;você deve&quot;</summary>
+          <div className="mt-2 space-y-1.5">
+            {parcels.map(d => (
+              <div key={d.id} className="flex justify-between">
+                <span className="text-muted">
+                  {d.name}{' '}
+                  <span className="text-xs text-faint">
+                    (faltam {d.left} × {brl(d.parcel)})
+                  </span>
+                </span>
+                <span className="text-bad">{brl(d.amount)}</span>
+              </div>
+            ))}
+            {others.map(d => (
+              <div key={d.id} className="flex justify-between">
+                <span className="text-muted">{d.name || 'Dívida'}</span>
+                <span className="text-bad">{brl(d.amount)}</span>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+      <p className="text-xs text-faint">Parcelas marcadas com 📌 nos Gastos mensais entram sozinhas. Cartão ou empréstimo você adiciona no lápis.</p>
       <Modal open={editing} title="Outras dívidas" subtitle="O saldo que falta pagar de cada uma" onClose={() => setEditing(false)}>
         <DebtsForm
           list={manual?.list || []}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { investNet, irRate, simulateAnticipation } from './debt';
+import { daysOf, investNet, irRate, simulateAnticipation } from './debt';
 
 describe('antecipar parcelas x investir', () => {
   it('IR regressivo da renda fixa', () => {
@@ -35,9 +35,13 @@ describe('antecipar parcelas x investir', () => {
     expect(s.nominal).toBe(300);
     expect(s.cost).toBeLessThan(300);
   });
+  it('daysOf conta dias corridos: 6 meses = 183, 1 ano = 365, 2 anos = 731', () => {
+    expect([6, 12, 24].map(daysOf)).toEqual([183, 365, 731]);
+  });
   it('investNet desconta IR só do ganho', () => {
     expect(investNet(1000, 0, 12)).toBe(1000);
     expect(investNet(1000, 12, 12, true)).toBeCloseTo(1120, 5);
-    expect(investNet(1000, 12, 12)).toBeCloseTo(1000 + 120 * 0.8, 5);
+    // 12 meses = 365 dias: já cai na faixa de 17,5% (com "× 30" dava 360 dias e 20%, errado).
+    expect(investNet(1000, 12, 12)).toBeCloseTo(1000 + 120 * 0.825, 5);
   });
 });

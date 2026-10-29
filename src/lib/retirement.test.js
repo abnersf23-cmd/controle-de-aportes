@@ -21,13 +21,18 @@ describe('aposentadoria', () => {
 
 describe('comparador de investimentos', () => {
   const base = { amount: 10000, months: 24, selic: 15, cdi: 14.9 };
-  it('LCI isenta a 90% do CDI vs CDB 100% com IR de 17,5% (2 anos)', () => {
+  it('LCI isenta a 90% do CDI vs CDB 100% com IR de 15% (2 anos = 731 dias)', () => {
     const rows = compareInvestments({ ...base, months: 24 });
     const cdb = rows.find(r => r.id === 'cdb'),
       lci = rows.find(r => r.id === 'lci');
-    expect(cdb.note).toBe('IR de 17,5%');
+    expect(cdb.note).toBe('IR de 15%');
+    expect(compareInvestments({ ...base, months: 12 }).find(r => r.id === 'cdb').note).toBe('IR de 17,5%');
     expect(lci.tax).toBe(0);
     expect(rows[0].net).toBeGreaterThanOrEqual(rows[rows.length - 1].net);
+  });
+  it('ações: vendendo até R$ 20 mil no mês o lucro é isento', () => {
+    expect(compareInvestments({ ...base, amount: 1000 }).find(r => r.id === 'acoes').tax).toBe(0);
+    expect(compareInvestments({ ...base, amount: 50000 }).find(r => r.id === 'acoes').tax).toBeGreaterThan(0);
   });
   it('FII sem valorização não paga IR (só rendimentos isentos)', () => {
     const fii = compareInvestments({ ...base, fiiDy: 10, fiiGrowth: 0 }).find(r => r.id === 'fii');
