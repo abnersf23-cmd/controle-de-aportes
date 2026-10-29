@@ -35,10 +35,12 @@ export default function Simuladores({ data }) {
       <div className="overflow-x-auto pb-1">
         <Segmented value={tab} onChange={setTab} options={SIMULATORS} />
       </div>
-      {tab === 'antecipar' && <DebtSimulator fixed={fixed} month={monthKey()} />}
-      {tab === 'consignado' && <Consignado />}
-      {tab === 'aposentadoria' && <Aposentadoria current={current} monthly={plan?.monthly ?? PLAN_DEFAULTS.monthly} />}
-      {tab === 'comparador' && <Comparador rates={rates} />}
+      <div key={tab} className="fade-in">
+        {tab === 'antecipar' && <DebtSimulator fixed={fixed} month={monthKey()} />}
+        {tab === 'consignado' && <Consignado />}
+        {tab === 'aposentadoria' && <Aposentadoria current={current} monthly={plan?.monthly ?? PLAN_DEFAULTS.monthly} />}
+        {tab === 'comparador' && <Comparador rates={rates} />}
+      </div>
     </div>
   );
 }

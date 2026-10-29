@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { Flag } from 'lucide-react';
 import { PageHeader, Segmented } from '@/components/ui/Bits';
 import ProjectionChart from '@/components/charts/ProjectionChart';
+import Slider from '@/components/ui/Slider';
+import { compactBrl } from '@/components/charts/theme';
 import useSetting from '@/hooks/useSetting';
 import useMarketRates from '@/hooks/useMarketRates';
 import { brl, pct, projectionData, effectiveRate, bucketBalance, stockTotal, milestones, weightedAverageRate, realRate, dateLabel } from '@/lib/finance';
@@ -62,20 +64,27 @@ export default function Projecao({ data }) {
       </PageHeader>
       <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
         <section className="card space-y-4 p-5">
-          <label className="label">
-            Aporte mensal (R$)
-            <input
-              type="number"
-              min="0"
-              value={manual}
-              onChange={e => setManual(e.target.value)}
-              placeholder={average ? `Sua média: ${average.toFixed(2)}` : '0,00'}
-              className="field"
+          <div className="space-y-1">
+            {/* Arraste para ver na hora como o aporte muda o futuro. Em branco = sua média. */}
+            <Slider
+              label="Aporte mensal (R$)"
+              value={manual === '' ? String(Math.round(average)) : manual}
+              onChange={setManual}
+              min={0}
+              max={Math.max(5000, Math.ceil((average * 2) / 1000) * 1000)}
+              step={50}
+              format={compactBrl}
             />
-            <span className="mt-1 block font-normal text-faint">
-              {manual === '' ? `Usando sua média de ${brl(average)} (${records.length} meses registrados).` : 'Apague para voltar à média.'}
-            </span>
-          </label>
+            <p className="text-xs text-faint">
+              {manual === '' ? (
+                `Usando sua média de ${brl(average)} (${records.length} meses registrados).`
+              ) : (
+                <button type="button" onClick={() => setManual('')} className="font-semibold text-accent hover:underline">
+                  Voltar para a sua média ({brl(average)})
+                </button>
+              )}
+            </p>
+          </div>
           <label className="label">
             Inflação esperada (% a.a.)
             <input

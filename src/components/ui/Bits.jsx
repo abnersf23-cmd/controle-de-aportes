@@ -1,4 +1,5 @@
 import { Info } from 'lucide-react';
+import CountUp from '@/components/ui/CountUp';
 
 export function PageHeader({ title, subtitle, children }) {
   return (
@@ -23,7 +24,9 @@ export function Stat({ icon: Icon, label, value, hint, tone = 'ink', iconTone = 
       )}
       <div className="min-w-0">
         <p className="text-xs text-muted">{label}</p>
-        <strong className={`block truncate text-lg ${toneClass}`}>{value}</strong>
+        <strong className={`block truncate text-lg ${toneClass}`}>
+          <CountUp value={value} />
+        </strong>
         {hint && <p className="truncate text-xs text-faint">{hint}</p>}
       </div>
     </div>

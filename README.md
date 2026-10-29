@@ -39,6 +39,8 @@ e não mostrava quanto cada parte realmente rendeu. O app responde a três pergu
 | **Gerenciar ativos** | Buckets, taxas (CDI, Selic, Fed, personalizada), bucket protegido e rebalanceamento automático para 100% |
 | **Backup** | Exportar/restaurar `.json` (dados **e configurações**), **backup com senha** (AES-256) e backup automático diário numa pasta escolhida |
 
+**Sliders e animações:** os simuladores e a Projeção têm controles deslizantes (arraste para explorar, ou digite o número exato). As telas entram em cascata, os valores "contam" até o número novo e as barras enchem ao aparecer. Quem ativa *reduzir movimento* no sistema não vê as animações.
+
 **Busca rápida:** `Ctrl + K` (ou o botão *Buscar* no menu) abre uma busca por aba, conta, ativo ou simulador. O menu lateral é agrupado em *Dia a dia*, *Análises* e *Ajustes*.
 
 Também tem tema claro/escuro, layout responsivo (menu lateral no computador, barra inferior no
@@ -178,9 +180,9 @@ e um job de qualidade que roda o ESLint e confere a formatação do Prettier.
 - juros economizados ao antecipar ou quitar, consignado (Price, CET e IOF), aposentadoria e comparador de investimentos com IR;
 - dividend yield por ativo, patrimônio líquido, resumo da planilha e busca rápida.
 
-**13 testes de interface** (Playwright, em [`e2e/`](e2e)) que abrem o app e clicam como um usuário:
+**14 testes de interface** (Playwright, em [`e2e/`](e2e)) que abrem o app e clicam como um usuário:
 plano de aportes, aviso de Selic nova, orçamento estourado, simulador de parcelas, projeção com metas, fechamento do mês, backup com senha,
-busca com Ctrl+K, abas do Início, antecipar parcelas (com e sem juros), aposentadoria, onde investir e patrimônio líquido.
+busca com Ctrl+K, abas do Início, antecipar parcelas (com e sem juros), aposentadoria, onde investir, patrimônio líquido e o slider do consignado.
 As respostas do Banco Central e do Yahoo são simuladas, então os testes não dependem da internet.
 
 ## Estrutura do código

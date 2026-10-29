@@ -151,7 +151,7 @@ export default function Inicio({ data, goTo }) {
       </div>
 
       {tab === 'mes' && (
-        <>
+        <div key="mes" className="fade-in space-y-5">
           <div className="space-y-2">
             <RatesNotice market={market} buckets={buckets} updateRate={data.updateRate} />
             <BudgetAlert assistant={assistant} goTo={goTo} />
@@ -234,11 +234,11 @@ export default function Inicio({ data, goTo }) {
             <PlanCard buckets={buckets} records={records} extras={extras} stocks={stocks} />
             <CashflowCard assistant={assistant} goTo={goTo} />
           </div>
-        </>
+        </div>
       )}
 
       {tab === 'carteira' && (
-        <>
+        <div key="carteira" className="fade-in space-y-5">
           <div className="grid gap-3 sm:grid-cols-3">
             <Stat icon={TrendingUp} label="Patrimônio total" value={brl(totalValue)} />
             <Stat icon={TrendingUp} label="Rendimento acumulado" value={brl(totalYield)} tone="good" />
@@ -291,11 +291,11 @@ export default function Inicio({ data, goTo }) {
             </CompositionCard>
             <NetWorthCard assets={totalValue} />
           </div>
-        </>
+        </div>
       )}
 
       {tab === 'metas' && (
-        <>
+        <div key="metas" className="fade-in space-y-5">
           <div className="grid items-start gap-4 lg:grid-cols-2">
             <GoalCard
               goal={goals[0]}
@@ -322,7 +322,7 @@ export default function Inicio({ data, goTo }) {
               </span>
             </button>
           </div>
-        </>
+        </div>
       )}
 
       <Modal open={!!modal} title={titles[modal?.kind]} subtitle={b?.name} onClose={close} wide={modal?.kind === 'edit' || modal?.kind === 'add'}>

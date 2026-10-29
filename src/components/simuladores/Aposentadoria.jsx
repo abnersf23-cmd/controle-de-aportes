@@ -1,5 +1,6 @@
-import { Field } from '@/components/ui/Bits';
-import { Answer, Chips, Figure, More } from '@/components/simuladores/Parts';
+import { Answer, Figure, More } from '@/components/simuladores/Parts';
+import Slider from '@/components/ui/Slider';
+import { compactBrl } from '@/components/charts/theme';
 import useSetting from '@/hooks/useSetting';
 import { retirementPlan } from '@/lib/retirement';
 import { brl, pct } from '@/lib/finance';
@@ -11,7 +12,6 @@ export const RETIREMENT_DEFAULTS = { age: '', retireAge: 60, income: 3000, realR
 export default function Aposentadoria({ current, monthly }) {
   const [f, save] = useSetting('retirement', RETIREMENT_DEFAULTS);
   if (!f) return null;
-  const set = key => e => save({ [key]: e.target.value });
   const put = key => value => save({ [key]: value });
   const ready = Number(f.age) > 0 && Number(f.retireAge) > Number(f.age) && Number(f.income) > 0;
   const p = ready ? retirementPlan({ ...f, current, monthly }) : null;
@@ -20,24 +20,46 @@ export default function Aposentadoria({ current, monthly }) {
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[1fr_1.1fr]">
       <section className="card space-y-4 p-5">
-        <Field label="1. Quantos anos você tem?">
-          <input type="number" min="0" step="1" value={f.age} onChange={set('age')} className="field" placeholder="ex.: 22" />
-        </Field>
-        <Field label="2. Com quantos anos quer parar de trabalhar?">
-          <input type="number" min="0" step="1" value={f.retireAge} onChange={set('retireAge')} className="field" />
-          <Chips value={f.retireAge} options={[45, 50, 55, 60, 65]} onChange={put('retireAge')} format={a => `${a} anos`} />
-        </Field>
-        <Field label="3. Quanto quer receber por mês? (R$)" hint="Pense no dinheiro de hoje: o app já desconta a inflação.">
-          <input type="number" min="0" step="100" value={f.income} onChange={set('income')} className="field" />
-          <Chips value={f.income} options={[2000, 3000, 5000, 10000]} onChange={put('income')} format={v => brl(v).replace(',00', '')} />
-        </Field>
+        <Slider label="1. Quantos anos você tem?" unit="anos" value={f.age} onChange={put('age')} min={14} max={70} placeholder="ex.: 22" />
+        <Slider label="2. Com quantos anos quer parar de trabalhar?" unit="anos" value={f.retireAge} onChange={put('retireAge')} min={35} max={80} />
+        <Slider
+          label="3. Quanto quer receber por mês?"
+          unit="R$"
+          value={f.income}
+          onChange={put('income')}
+          min={1000}
+          max={30000}
+          step={500}
+          format={compactBrl}
+          hint="em dinheiro de hoje"
+        />
         <More>
-          <Field label="Quanto o dinheiro rende acima da inflação (% ao ano)" hint="4% é uma suposição conservadora para muitos anos.">
-            <input type="number" min="0" step="0.5" value={f.realRate} onChange={set('realRate')} className="field" />
-          </Field>
-          <Field label="Quanto tirar por ano depois de parar (%)" hint="Regra dos 4%: tirando 4% ao ano, o dinheiro tende a durar a vida toda.">
-            <input type="number" min="1" step="0.5" value={f.withdrawRate} onChange={set('withdrawRate')} className="field" />
-          </Field>
+          <div className="sm:col-span-2">
+            <Slider
+              label="Quanto o dinheiro rende acima da inflação (% ao ano)"
+              unit="%"
+              value={f.realRate}
+              onChange={put('realRate')}
+              min={1}
+              max={10}
+              step={0.5}
+              format={v => pct(v)}
+              hint="4% é conservador"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <Slider
+              label="Quanto tirar por ano depois de parar (%)"
+              unit="%"
+              value={f.withdrawRate}
+              onChange={put('withdrawRate')}
+              min={2}
+              max={8}
+              step={0.5}
+              format={v => pct(v)}
+              hint="regra dos 4%: o dinheiro dura"
+            />
+          </div>
         </More>
       </section>
 

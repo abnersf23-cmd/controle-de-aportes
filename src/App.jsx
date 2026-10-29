@@ -34,6 +34,7 @@ import Simuladores, { SIMULATORS } from '@/pages/Simuladores';
 import Backup from '@/pages/Backup';
 import Boasvindas from '@/pages/Boasvindas';
 import { brl, monthKey, totalBalance } from '@/lib/finance';
+import CountUp from '@/components/ui/CountUp';
 
 // Abas agrupadas no menu: o dia a dia em cima, análises no meio, configuração embaixo.
 const PAGES = [
@@ -170,7 +171,9 @@ export default function App() {
         </div>
         <div className="mb-4 rounded-xl bg-surface2 p-3">
           <p className="text-xs text-muted">Patrimônio</p>
-          <p className="text-lg font-bold">{brl(total)}</p>
+          <p className="text-lg font-bold">
+            <CountUp value={brl(total)} />
+          </p>
         </div>
         <button
           onClick={() => setSearch(true)}
@@ -229,7 +232,10 @@ export default function App() {
         <div className="print:hidden">
           <MonthCloseBanner />
         </div>
-        <Page data={data} goTo={goTo} />
+        {/* key: ao trocar de aba a página remonta e a animação de entrada (.page-enter) roda de novo. */}
+        <div key={tab} className="page-enter">
+          <Page data={data} goTo={goTo} />
+        </div>
       </main>
       <CommandPalette open={search} onClose={() => setSearch(false)} items={searchItems} />
 

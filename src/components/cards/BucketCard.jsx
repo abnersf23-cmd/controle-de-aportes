@@ -1,6 +1,7 @@
 import { Check, DollarSign, MoreHorizontal, Pencil, Plus, RefreshCw, ShieldCheck, TrendingDown, Undo2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { brl, usd, pct, dateLabel, effectiveRate, daysSince } from '@/lib/finance';
+import CountUp from '@/components/ui/CountUp';
 
 function Menu({ items }) {
   const [open, setOpen] = useState(false);
@@ -79,7 +80,7 @@ export default function BucketCard({ bucket, balance, total, marked, onAction })
 
       <div className="mt-4">
         <p className="text-2xl font-bold" style={{ color: bucket.color }}>
-          {isDollar ? usd(balance.usdBalance) : brl(balance.balance)}
+          {isDollar ? usd(balance.usdBalance) : <CountUp value={brl(balance.balance)} />}
         </p>
         <p className="text-xs text-muted">{isDollar ? `Saldo em dólar · ≈ ${brl(balance.balance)}` : 'Saldo calculado'}</p>
       </div>

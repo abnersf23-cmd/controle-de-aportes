@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Field } from '@/components/ui/Bits';
-import { Answer, Chips, Figure, More } from '@/components/simuladores/Parts';
+import { Answer, Figure, More } from '@/components/simuladores/Parts';
+import Slider from '@/components/ui/Slider';
+import { compactBrl } from '@/components/charts/theme';
 import { simulateConsigned } from '@/lib/loan';
 import { brl, pct } from '@/lib/finance';
 
@@ -18,20 +20,25 @@ export default function Consignado() {
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[1fr_1.1fr]">
       <section className="card space-y-4 p-5">
-        <Field label="1. Quanto você precisa? (R$)">
-          <input type="number" min="0" step="100" value={f.amount} onChange={set('amount')} className="field" placeholder="ex.: 5000" />
-        </Field>
-        <Field label="2. Em quantos meses quer pagar?">
-          <input type="number" min="1" step="1" value={f.months} onChange={set('months')} className="field" />
-          <Chips value={f.months} options={[12, 24, 36, 48, 72]} onChange={put('months')} format={m => `${m} meses`} />
-        </Field>
+        <Slider label="1. Quanto você precisa?" unit="R$" value={f.amount} onChange={put('amount')} min={500} max={50000} step={500} format={compactBrl} />
+        <Slider label="2. Em quantos meses quer pagar?" unit="meses" value={f.months} onChange={put('months')} min={6} max={96} step={6} format={m => `${m}`} />
         <Field label="3. Quanto cai na sua conta por mês? (R$)" hint="Opcional. Serve para ver se a parcela cabe no limite do consignado.">
           <input type="number" min="0" step="0.01" value={f.salary} onChange={set('salary')} className="field" placeholder="salário líquido" />
         </Field>
         <More>
-          <Field label="Juros (% ao mês)" hint="1,8% é uma taxa comum de consignado. Use a que o banco te passar.">
-            <input type="number" min="0" step="0.01" value={f.rate} onChange={set('rate')} className="field" />
-          </Field>
+          <div className="sm:col-span-2">
+            <Slider
+              label="Juros (% ao mês)"
+              unit="%"
+              value={f.rate}
+              onChange={put('rate')}
+              min={0.5}
+              max={4}
+              step={0.05}
+              format={v => pct(v)}
+              hint="1,8% é comum; use a do banco"
+            />
+          </div>
           <Field label="Limite do salário para consignado (%)" hint="Em geral, 35% do salário.">
             <input type="number" min="0" step="1" value={f.marginPct} onChange={set('marginPct')} className="field" />
           </Field>

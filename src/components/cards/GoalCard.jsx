@@ -72,7 +72,7 @@ export default function GoalCard({ goal, currentBalance, averageMonthly, buckets
             <strong>{brl(currentBalance)}</strong>
           </div>
           <div className="mt-2 h-3 overflow-hidden rounded-full bg-surface2">
-            <div className="h-full rounded-full bg-good transition-all" style={{ width: `${progress}%` }} />
+            <div className="bar-fill h-full rounded-full bg-good" style={{ width: `${progress}%` }} />
           </div>
           <div className="mt-1 flex justify-between text-xs text-muted">
             <span>{progress.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%</span>

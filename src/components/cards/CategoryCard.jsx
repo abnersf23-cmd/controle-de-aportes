@@ -1,6 +1,7 @@
 import { ChevronDown, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { brl, pct, round } from '@/lib/finance';
+import CountUp from '@/components/ui/CountUp';
 
 // Agrupa buckets da mesma categoria (ex.: Tesouro Direto) e expande ao clicar.
 export default function CategoryCard({ name, items, renderBucket, onAdd }) {
@@ -15,7 +16,9 @@ export default function CategoryCard({ name, items, renderBucket, onAdd }) {
         <span className="w-1.5 self-stretch rounded-full transition-all duration-200 group-hover:w-2" style={{ backgroundColor: accent }} />
         <div className="min-w-0 flex-1">
           <p className="text-xs font-bold uppercase tracking-wider text-muted">{name}</p>
-          <p className="mt-0.5 text-2xl font-bold">{brl(totalBalance)}</p>
+          <p className="mt-0.5 text-2xl font-bold">
+            <CountUp value={brl(totalBalance)} />
+          </p>
           <p className="truncate text-xs text-muted">{items.map(i => `${i.b.icon} ${i.b.name}`).join(' · ')}</p>
           <p className="mt-1 text-xs text-faint">
             Aportado {brl(totalContributed)} · {pct(totalPercentage)} do aporte

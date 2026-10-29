@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 import { brl, pct, round } from '@/lib/finance';
+import CountUp from '@/components/ui/CountUp';
 
 // "Do que é feita a carteira": rosca (donut) com o total no meio + a lista ordenada pelo valor.
 // Fatias separadas por um respiro e com cantos arredondados; passar o mouse numa fatia (ou na
@@ -42,7 +43,7 @@ export default function CompositionCard({ title, subtitle, data, plan, emptyLabe
                   stroke="none"
                   startAngle={90}
                   endAngle={-270}
-                  isAnimationActive={false}
+                  animationDuration={700}
                   onMouseEnter={d => setHover(keyOf(d))}
                 >
                   {items.map(d => (
@@ -55,7 +56,7 @@ export default function CompositionCard({ title, subtitle, data, plan, emptyLabe
             <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
               <div className="max-w-[120px]">
                 <p className="truncate text-xs text-muted">{active ? active.name : 'Total'}</p>
-                <p className="text-base font-bold leading-tight">{format(active ? active.value : total)}</p>
+                <p className="text-base font-bold leading-tight">{active ? format(active.value) : <CountUp value={format(total)} />}</p>
                 {active && <p className="text-xs text-muted">{pct(round(share(active)))}</p>}
               </div>
             </div>
