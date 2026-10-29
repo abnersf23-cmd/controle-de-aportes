@@ -6,7 +6,12 @@ import StockBucketCard from '@/components/cards/StockBucketCard';
 import GoalCard from '@/components/cards/GoalCard';
 import AssistantCard from '@/components/cards/AssistantCard';
 import ReserveCard from '@/components/cards/ReserveCard';
+import PlanCard from '@/components/cards/PlanCard';
+import CashflowCard from '@/components/cards/CashflowCard';
+import BudgetAlert from '@/components/cards/BudgetAlert';
+import RatesNotice from '@/components/cards/RatesNotice';
 import useAssistant from '@/hooks/useAssistant';
+import useMarketRates from '@/hooks/useMarketRates';
 import MonthlySummary from '@/components/cards/MonthlySummary';
 import DistributionChart from '@/components/charts/DistributionChart';
 import PieCard from '@/components/charts/PieCard';
@@ -26,6 +31,7 @@ export default function Inicio({ data, goTo }) {
   const { buckets, records, extras, withdrawals, stocks, quotes, goals } = data;
   const run = useAction();
   const assistant = useAssistant();
+  const market = useMarketRates();
   const [input, setInput] = useState('');
   const [total, setTotal] = useState(0);
   const [modal, setModal] = useState(null); // { kind, bucket }
@@ -67,6 +73,8 @@ export default function Inicio({ data, goTo }) {
 
   return (
     <div className="space-y-6">
+      <RatesNotice market={market} buckets={buckets} updateRate={data.updateRate} />
+      <BudgetAlert assistant={assistant} goTo={goTo} />
       {dollarStale != null && dollarStale > 7 && <Notice>A cotação do dólar está há {dollarStale} dias sem atualizar. <button className="font-semibold underline" onClick={() => setModal({ kind: 'dollar', bucket: dollarBucket })}>Atualizar agora</button></Notice>}
 
       <section className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
@@ -93,6 +101,11 @@ export default function Inicio({ data, goTo }) {
       <div className="grid gap-4 lg:grid-cols-2">
         <AssistantCard assistant={assistant} buckets={buckets} goTo={goTo} onUse={v => { setInput(String(v)); setTotal(v); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
         <ReserveCard assistant={assistant} balances={balances} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <PlanCard buckets={buckets} records={records} extras={extras} stocks={stocks} />
+        <CashflowCard assistant={assistant} goTo={goTo} />
       </div>
 
       {cashItem && <div className="grid gap-4 md:grid-cols-2">{renderBucket(cashItem)}<MonthlySummary buckets={trading} records={records} extras={extras} withdrawals={withdrawals} stocks={stocks} /></div>}

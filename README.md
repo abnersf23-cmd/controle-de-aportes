@@ -28,14 +28,14 @@ e não mostrava quanto cada parte realmente rendeu. O app responde a três pergu
 
 | Aba | O que faz |
 |---|---|
-| **Início** | Divide o valor que sobrou entre os "buckets" pela porcentagem de cada um, assistente que sugere quanto aportar da sobra do mês, meta da reserva de emergência, patrimônio total, rendimento, meta e gráficos |
+| **Início** | Divide o valor que sobrou entre os "buckets" pela porcentagem de cada um, assistente que sugere quanto aportar da sobra do mês, meta da reserva de emergência, **previsto x realizado** dos aportes, **saldo projetado até o fim do mês**, aviso de **orçamento estourado**, aviso de **Selic/CDI novos do Banco Central**, patrimônio total, rendimento, meta e gráficos |
 | **FIIs e Ações** | Compra e venda, preço médio, cotação automática (Yahoo Finance), dividendos recebidos e calendário de dividendos |
 | **Saques e gastos** | Histórico com filtro, gráfico por categoria e exportação CSV |
-| **Gastos mensais** | Planilha por quinzena (dia 15 e dia 30) com "duplicar mês" para até 12 meses contas fixas (📌) que se repetem sozinhas, parcelas com fim, categorias com gráfico e marcação de contas pagas |
+| **Gastos mensais** | Planilha por quinzena (dia 15 e dia 30) com "duplicar mês" para até 12 meses contas fixas (📌) que se repetem sozinhas, parcelas com fim, categorias com gráfico, **orçamento por categoria** (aviso a 80% e ao passar do limite), **simulador "antecipar parcelas x investir"** e marcação de contas pagas |
 | **Relatório** | Lançamentos por dia, semana ou mês, evolução do patrimônio e CSV |
-| **Projeção** | Simulação de 1, 2 ou 5 anos com as taxas atuais de cada bucket |
+| **Projeção** | Simulação de 1 a 10 anos a partir do patrimônio atual, **descontando a inflação** (IPCA do Banco Central) e **metas de R$ 10 mil, 100 mil, 500 mil e 1 milhão** |
 | **Gerenciar ativos** | Buckets, taxas (CDI, Selic, Fed, personalizada), bucket protegido e rebalanceamento automático para 100% |
-| **Backup** | Exportar/restaurar `.json` e backup automático diário numa pasta escolhida |
+| **Backup** | Exportar/restaurar `.json` (dados **e configurações**), **backup com senha** (AES-256) e backup automático diário numa pasta escolhida |
 
 Também tem tema claro/escuro, layout responsivo (menu lateral no computador, barra inferior no
 celular), confirmação antes de excluir e botão "Desfazer".
@@ -64,6 +64,7 @@ celular), confirmação antes de excluir e botão "Desfazer".
 | Gráficos | **Recharts** | Gráficos de pizza, linha e área |
 | Ícones | **lucide-react** | |
 | Testes | **Vitest** + `fake-indexeddb` | Testa cálculos e banco sem abrir navegador |
+| Testes de interface | **Playwright** | Abre o app no Chromium e testa os fluxos como um usuário |
 
 ## Como rodar
 
@@ -85,6 +86,7 @@ Outros comandos:
 
 ```bash
 npm test           # testes automáticos
+npm run test:e2e   # testes de interface (Playwright)
 npm run build      # versão de produção em dist/
 ```
 
@@ -118,6 +120,19 @@ errado. A versão nova trata datas como texto `AAAA-MM-DD` no fuso local, com te
 do navegador ([`vite.config.js`](vite.config.js)). Só o **ticker** (ex.: `MXRF11`) sai do computador,
 nunca valores. Sem internet, o app usa as últimas cotações salvas.
 
+**Taxas do Banco Central.** Selic (série 432), CDI (4389) e IPCA 12 meses (13522) vêm da
+[API SGS](https://dadosabertos.bcb.gov.br/) do Banco Central, também pelo proxy do Vite, no máximo
+uma vez a cada 12 horas. O app **não muda a taxa sozinho**: ele avisa e você confirma com um clique,
+e a taxa nova entra no histórico a partir de hoje.
+
+**Inflação na projeção.** O valor "de hoje" usa a taxa real pela equação de Fisher:
+`(1 + juros) / (1 + inflação) − 1`. Com 14% de juros e 4,5% de inflação, o ganho real é 9,09%, não 9,5%.
+
+**Backup com senha.** Usa a [Web Crypto API](https://developer.mozilla.org/docs/Web/API/Web_Crypto_API)
+do navegador, sem biblioteca: PBKDF2 (SHA-256, 310 mil iterações, sal aleatório) gera a chave e
+AES-GCM de 256 bits criptografa. O GCM detecta arquivo alterado ou senha errada. A senha não é
+guardada em lugar nenhum ([`src/lib/crypto.js`](src/lib/crypto.js)).
+
 **Transações no banco.** Importar backup e duplicar meses usam `db.transaction`: ou tudo é gravado,
 ou nada. Um erro no meio não deixa dados pela metade.
 
@@ -129,13 +144,14 @@ repositório.
 
 ```bash
 npm test
+npm run test:e2e   # testes de interface (Playwright); na 1ª vez: npx playwright install chromium
 ```
 
 Os testes também rodam sozinhos no GitHub Actions a cada push
-([`.github/workflows/testes.yml`](.github/workflows/testes.yml)), duas vezes: no fuso UTC e no
-fuso de Brasília, para pegar erros de data que só aparecem em um deles.
+([`.github/workflows/testes.yml`](.github/workflows/testes.yml)): os de lógica duas vezes (fuso UTC e
+fuso de Brasília, para pegar erros de data que só aparecem em um deles) e os de interface no Chromium.
 
-26 testes automáticos cobrindo:
+**73 testes de lógica** (Vitest) cobrindo:
 
 - juros compostos diários e troca de taxa no meio do período;
 - conversão e rendimento em dólar;
@@ -144,7 +160,16 @@ fuso de Brasília, para pegar erros de data que só aparecem em um deles.
 - tempo estimado para atingir a meta;
 - datas no fuso local (incluindo o horário depois das 21h);
 - importação/exportação de backup (incluindo o formato antigo do Base44);
-- duplicação da planilha de gastos.
+- duplicação da planilha de gastos;
+- previsto x realizado, saldo projetado do mês e orçamento por categoria;
+- leitura da API do Banco Central e taxa real (inflação);
+- backup com senha (senha errada, arquivo alterado, senha curta);
+- simulador de antecipar parcelas x investir (valor presente e IR regressivo);
+- nomes com acento ou maiúscula diferente ("MÃE" e "Mae" são a mesma conta).
+
+**6 testes de interface** (Playwright, em [`e2e/`](e2e)) que abrem o app e clicam como um usuário:
+plano de aportes, aviso de Selic nova, orçamento estourado, simulador de parcelas, projeção com metas e backup com senha.
+As respostas do Banco Central e do Yahoo são simuladas, então os testes não dependem da internet.
 
 ## Estrutura do código
 
@@ -163,9 +188,9 @@ docs/           imagens deste README
 ## Próximos passos
 
 - [ ] Versão desktop instalável (Tauri ou Electron)
-- [ ] Testes de interface (Playwright)
+- [x] Testes de interface (Playwright)
 - [ ] Importar extrato da corretora (CSV)
-- [ ] Integração contínua com GitHub Actions rodando os testes a cada push
+- [x] Integração contínua com GitHub Actions rodando os testes a cada push
 
 ---
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { averageMonthlyBills, monthLeftover, reserveStatus, suggestContribution } from './assistant';
+import { averageMonthlyBills, monthCashflow, monthLeftover, reserveStatus, suggestContribution } from './assistant';
 
 describe('assistente de aporte', () => {
   it('calcula a sobra do mês pela planilha', () => {
@@ -29,5 +29,15 @@ describe('reserva de emergência', () => {
   it('diz quantos meses a reserva cobre e quanto falta', () => {
     expect(reserveStatus(1800, 900, 6, 300)).toMatchObject({ target: 5400, missing: 3600, covered: 2, monthsToGoal: 12 });
     expect(reserveStatus(6000, 900, 6).monthsToGoal).toBe(0);
+  });
+  it('saldo projetado: quinzena a quinzena, com o que falta pagar', () => {
+    const r = { income_15: 1000, income_30: 2000, items: [{ vale: 1200, paid_15: true }, { pagamento: 500 }, { pagamento: 300, paid_30: true }] };
+    const cf = monthCashflow(r, 20);
+    expect(cf.steps.map(s => s.balance)).toEqual([-200, 1000]);
+    expect(cf.end).toBe(1000);
+    expect(cf.unpaid).toBe(500);
+    expect(cf.negative).toEqual([15]);
+    expect(cf.next).toMatchObject({ day: 30, unpaid: 500 });
+    expect(monthCashflow({ ...r, items: r.items.map(i => ({ ...i, paid_30: true })) }, 31).next).toBeNull();
   });
 });

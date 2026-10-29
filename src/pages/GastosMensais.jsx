@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Circle, Copy, CopyPlus, Pin, Plus, Trash2 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
+import BudgetCard from '@/components/cards/BudgetCard';
+import DebtSimulator from '@/components/cards/DebtSimulator';
 import { Field, Notice, PageHeader } from '@/components/ui/Bits';
 import { useConfirm } from '@/components/ui/Confirm';
 import { useAction } from '@/components/ui/Toast';
@@ -8,6 +10,7 @@ import useExpenses from '@/hooks/useExpenses';
 import { db, newId } from '@/db/database';
 import { applyFixed, fixedEnd, freshCopy, parcelNumber } from '@/db/expenses';
 import { addMonths, monthKey } from '@/lib/dates';
+import { nameKey } from '@/lib/text';
 import { brl, monthLabel, round } from '@/lib/finance';
 import { CATEGORIES, categoryOf, learnedCategories, totalsByCategory } from '@/lib/categories';
 
@@ -101,8 +104,8 @@ export default function GastosMensais() {
   const copyPrevious = () => {
     const prev = records.find(r => r.month === addMonths(month, -1));
     if (!prev || !(prev.items || []).some(i => i.name)) return run(async () => { throw new Error('O mês anterior está vazio.'); });
-    const names = new Set(data.items.map(i => String(i.name || '').trim().toLowerCase()));
-    const missing = prev.items.filter(i => i.name && !names.has(i.name.trim().toLowerCase())).map(freshCopy);
+    const names = new Set(data.items.map(i => nameKey(i.name)));
+    const missing = prev.items.filter(i => i.name && !names.has(nameKey(i.name))).map(freshCopy);
     if (!missing.length) return run(async () => { throw new Error('Todas as contas do mês anterior já estão aqui.'); });
     persist({ income_15: data.income_15 === '' ? prev.income_15 ?? '' : data.income_15, income_30: data.income_30 === '' ? prev.income_30 ?? '' : data.income_30, items: [...data.items.filter(i => String(i.name || '').trim()), ...missing] });
     run(async () => {}, `${missing.length} conta${missing.length > 1 ? 's' : ''} copiada${missing.length > 1 ? 's' : ''} do mês anterior.`);
@@ -151,11 +154,7 @@ export default function GastosMensais() {
             <p className="text-2xl font-bold">{brl(totalVale + totalPag)}</p>
             <div className="space-y-2 border-t border-line pt-2"><Row label="Dia 15 (vale)" value={brl(totalVale)} /><Row label="Dia 30 (pagamento)" value={brl(totalPag)} /></div>
           </section>
-          {byCategory.length > 0 && <section className="card space-y-3 p-5">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Por categoria</p>
-            <div className="flex h-3 overflow-hidden rounded-full bg-surface2">{byCategory.map(c => <div key={c.id} style={{ width: `${c.pct}%`, background: c.color }} title={c.label} />)}</div>
-            <ul className="space-y-1.5 text-sm">{byCategory.map(c => <li key={c.id} className="flex items-center gap-2"><span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: c.color }} /><span className="flex-1 text-muted">{c.label}</span><strong>{brl(c.value)}</strong><span className="w-10 text-right text-xs text-faint">{Math.round(c.pct)}%</span></li>)}</ul>
-          </section>}
+          <BudgetCard byCategory={byCategory} />
           <section className="card space-y-2 p-5">
             <p className="text-xs font-bold uppercase tracking-wider text-muted">Falta pagar</p>
             <Row label="Dia 15" value={falta15 || !totalVale ? brl(falta15) : 'Tudo pago ✓'} />
@@ -170,6 +169,7 @@ export default function GastosMensais() {
             <div className="border-t border-line pt-2"><Row label="Resta no fim do mês" value={brl(resta15 + resta30)} strong negative={resta15 + resta30 < 0} /></div>
             {in15 + in30 > 0 && <div className="pt-2"><div className="h-2 overflow-hidden rounded-full bg-surface2"><div className={`h-full ${totalVale + totalPag > in15 + in30 ? 'bg-bad' : 'bg-accent'}`} style={{ width: `${Math.min(100, (totalVale + totalPag) / (in15 + in30) * 100)}%` }} /></div><p className="mt-1 text-xs text-muted">{Math.round((totalVale + totalPag) / (in15 + in30) * 100)}% da renda comprometida</p></div>}
           </section>
+          <DebtSimulator fixed={fixed} month={month} />
         </div>
       </div>
       <Modal open={!!parcelFor} title="Parcelas" subtitle={parcelFor?.name} onClose={() => setParcelFor(null)}>

@@ -1,7 +1,6 @@
 import { db, newId, stamp } from './database';
 import { addMonths } from '@/lib/dates';
-
-const norm = s => String(s || '').trim().toLowerCase();
+import { nameKey as norm } from '@/lib/text';
 
 // Cópia de uma conta para outro mês: id novo e ainda não paga.
 export const freshCopy = ({ paid_15, paid_30, ...item }) => ({ ...item, id: newId() });

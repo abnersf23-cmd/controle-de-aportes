@@ -22,6 +22,12 @@ describe('duplicar mês', () => {
     expect(nov.items[0].vale).toBe(120);
     expect(nov.income_15).toBe(5);
   });
+  it('juntar não duplica o mesmo nome escrito com acento ou maiúscula diferente (MÃE x Mae)', async () => {
+    await db.expenses.add({ id: 'w', month: '2026-12', items: [{ id: 'm', name: 'Mae', vale: 50, pagamento: 0 }] });
+    await duplicateExpenses({ items: [{ id: 'n', name: 'MÃE', vale: 50, pagamento: 0 }, { id: 'o', name: ' cartão  ', vale: 0, pagamento: 90 }] }, ['2026-12'], { incomes: false, mode: 'merge' });
+    const dez = await db.expenses.get('w');
+    expect(dez.items.map(i => i.name)).toEqual(['Mae', ' cartão  ']);
+  });
   it('a cópia chega no mês novo como não paga', async () => {
     await duplicateExpenses({ items: [{ id: 'a', name: 'Internet', vale: 100, pagamento: 0, paid_15: true }] }, ['2026-11']);
     const [item] = (await db.expenses.where('month').equals('2026-11').first()).items;
@@ -44,6 +50,7 @@ describe('contas fixas', () => {
     const out = applyFixed([celular], '2026-11', { items: [{ id: 'a', name: 'Internet', vale: 100, pagamento: 0 }] });
     expect(out.items.map(i => [i.name, i.vale, i.pagamento])).toEqual([['Internet', 100, 0], ['Celular', 0, 50]]);
     expect(out.fixed_applied).toEqual(['f1']);
+    expect(applyFixed([celular], '2026-11', { items: [{ id: 'a', name: 'CELULAR ', vale: 0, pagamento: 45 }] }).items).toHaveLength(1);
   });
   it('não volta depois que você apaga a linha no mês, e não duplica nome igual', () => {
     expect(applyFixed([celular], '2026-11', { items: [], fixed_applied: ['f1'] })).toBeNull();

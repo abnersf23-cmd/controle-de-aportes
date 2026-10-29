@@ -1,5 +1,6 @@
 // Categorias da planilha de gastos mensais.
 import { round } from './finance';
+import { nameKey } from './text';
 
 export const CATEGORIES = [
   { id: 'familia', label: 'Família', color: '#EC4899' },
@@ -13,7 +14,7 @@ export const CATEGORIES = [
 ];
 export const categoryById = id => CATEGORIES.find(c => c.id === id) || CATEGORIES[CATEGORIES.length - 1];
 
-const plain = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+const plain = nameKey;
 
 // Palavras que indicam a categoria (sem acento, em minúsculas). A primeira que bater vence.
 const KEYWORDS = [
@@ -54,4 +55,18 @@ export function totalsByCategory(items, learned = {}) {
   }
   const sum = Object.values(totals).reduce((s, v) => s + v, 0);
   return Object.entries(totals).map(([id, value]) => ({ ...categoryById(id), value, pct: sum ? (value / sum) * 100 : 0 })).sort((a, b) => b.value - a.value);
+}
+
+// Orçamento: compara o total de cada categoria com o limite definido (em R$ por mês).
+// level: 'over' (passou do limite), 'warn' (chegou a 80%), 'ok', ou null (sem limite).
+export const BUDGET_WARN = 0.8;
+export function budgetStatus(byCategory = [], limits = {}) {
+  const ids = new Set([...byCategory.map(c => c.id), ...Object.keys(limits).filter(id => Number(limits[id]) > 0)]);
+  return [...ids].map(id => {
+    const value = byCategory.find(c => c.id === id)?.value || 0;
+    const limit = Number(limits[id]) || 0;
+    const ratio = limit > 0 ? value / limit : null;
+    const level = limit > 0 ? (value > limit ? 'over' : ratio >= BUDGET_WARN ? 'warn' : 'ok') : null;
+    return { ...categoryById(id), value, limit, ratio, level, left: limit > 0 ? round(limit - value) : null };
+  }).sort((a, b) => (b.ratio ?? -1) - (a.ratio ?? -1) || b.value - a.value);
 }

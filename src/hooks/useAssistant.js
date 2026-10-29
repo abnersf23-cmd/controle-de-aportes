@@ -18,7 +18,7 @@ export default function useAssistant() {
   const saveSettings = patch => db.settings.put({ key: 'assistant', value: { ...settings, ...patch } });
   const hasMonth = !!data?.current && (data.current.items || []).some(i => i.name) && (Number(data.current.income_15) || Number(data.current.income_30)) > 0;
   return {
-    loading: !data, month, settings, saveSettings, hasMonth,
+    loading: !data, month, settings, saveSettings, hasMonth, current: data?.current || null, records: data?.records || [],
     suggestion: suggestContribution(hasMonth ? monthLeftover(data.current) : 0, settings),
     bills: averageMonthlyBills(data?.records || [], month)
   };
