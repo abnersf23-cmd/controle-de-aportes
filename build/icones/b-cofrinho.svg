@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="#111622"/>
+  <!-- moeda caindo -->
+  <circle cx="276" cy="112" r="40" fill="#fbbf24"/>
+  <text x="276" y="128" font-family="Arial, sans-serif" font-weight="700" font-size="46" fill="#92400e" text-anchor="middle">$</text>
+  <!-- corpo do cofrinho -->
+  <g fill="#10b981">
+    <ellipse cx="256" cy="300" rx="150" ry="112"/>
+    <path d="M176 210 L160 150 L222 192 Z"/>
+    <rect x="166" y="370" width="44" height="64" rx="16"/>
+    <rect x="296" y="370" width="44" height="64" rx="16"/>
+    <rect x="388" y="262" width="52" height="64" rx="22"/>
+  </g>
+  <rect x="226" y="200" width="88" height="16" rx="8" fill="#065f46"/>
+  <circle cx="200" cy="280" r="13" fill="#111622"/>
+  <path d="M106 300 q-36 -6 -30 -42" stroke="#10b981" stroke-width="16" fill="none" stroke-linecap="round"/>
+</svg>

@@ -71,6 +71,7 @@ celular), confirmação antes de excluir e botão "Desfazer".
 | Ícones | **lucide-react** | |
 | Testes | **Vitest** + `fake-indexeddb` | Testa cálculos e banco sem abrir navegador |
 | Testes de interface | **Playwright** | Abre o app no Chromium e testa os fluxos como um usuário |
+| App desktop | **Electron** + **electron-builder** | Mesmo app React numa janela própria, com instalador `.exe` para Windows |
 | Qualidade | **ESLint** + **Prettier** | O ESLint acha erros comuns (variável sem uso, hook no lugar errado); o Prettier deixa a formatação igual em todo arquivo |
 
 ## Como rodar
@@ -98,6 +99,23 @@ npm run lint       # ESLint
 npm run format     # formata o código com o Prettier
 npm run build      # versão de produção em dist/
 ```
+
+### App desktop (Windows)
+
+O mesmo app também roda como programa de Windows, com ícone na área de trabalho e sem precisar
+do terminal aberto.
+
+```bash
+npm run desktop    # gera o dist/ e abre o app numa janela do Electron
+npm run dist:win   # gera o instalador em release/Controle-de-Aportes-Setup-<versão>.exe
+```
+
+O instalador também é gerado pelo GitHub Actions: aba **Actions** > **Instalador Windows** >
+**Run workflow**, e o `.exe` aparece em *Artifacts* no fim da execução.
+
+> **Os dados não passam sozinhos do navegador para o app desktop.** Cada um tem o seu IndexedDB.
+> Para migrar: no navegador, aba Backup > *Exportar*; no app desktop, *Importar meus dados*.
+> No app desktop os dados ficam em `%APPDATA%\Controle de Aportes` e **não** são apagados ao desinstalar.
 
 ## Decisões técnicas
 
@@ -129,8 +147,15 @@ errado. A versão nova trata datas como texto `AAAA-MM-DD` no fuso local, com te
 do navegador ([`vite.config.js`](vite.config.js)). Só o **ticker** (ex.: `MXRF11`) sai do computador,
 nunca valores. Sem internet, o app usa as últimas cotações salvas.
 
+**Proxy no app desktop.** No instalador não existe servidor do Vite. Quem faz o papel do proxy é o
+processo principal do Electron ([`electron/main.js`](electron/main.js)): o app é servido num endereço
+próprio (`app://controle-aportes/`) e, quando a tela pede `/api/bcb/...`, o processo principal busca
+na internet e devolve a resposta. As rotas ficam num arquivo só, [`electron/proxyRoutes.js`](electron/proxyRoutes.js),
+usado pelo Vite e pelo Electron, e só três destinos são aceitos. A janela roda com `contextIsolation`,
+`sandbox` e sem `nodeIntegration`: a página não tem acesso ao Node nem a arquivos do computador.
+
 **Taxas do Banco Central.** Selic (série 432), CDI (4389) e IPCA 12 meses (13522) vêm da
-[API SGS](https://dadosabertos.bcb.gov.br/) do Banco Central, também pelo proxy do Vite, no máximo
+[API SGS](https://dadosabertos.bcb.gov.br/) do Banco Central, também pelo proxy (Vite ou Electron), no máximo
 uma vez a cada 12 horas. O app **não muda a taxa sozinho**: ele avisa e você confirma com um clique,
 e a taxa nova entra no histórico a partir de hoje.
 
@@ -192,7 +217,9 @@ src/
   lib/          cálculos puros + testes: finance.js, debt.js, loan.js, retirement.js, compare.js, stocks.js, networth.js, sheet.js…
   db/           database.js (tabelas Dexie), backup.js, expenses.js + testes
   hooks/        useFinanceData, useExpenses, useAutoBackup (ligam banco e tela)
-  services/     quotes.js (Yahoo / dólar), autoBackup.js
+  services/     quotes.js (Yahoo / dólar), rates.js (Banco Central), autoBackup.js
+electron/       main.js (janela + proxy do app desktop), proxyRoutes.js (rotas de internet, usadas também pelo Vite)
+build/          ícone do app desktop (icon.png) e opções em icones/
   pages/        uma tela por aba
   components/   cards, formulários, gráficos (charts/), planilha de gastos (gastos/), simuladores/ e peças de interface
 exemplo/        carteira fictícia para testar o app
@@ -201,7 +228,7 @@ docs/           imagens deste README
 
 ## Próximos passos
 
-- [ ] Versão desktop instalável (Tauri ou Electron)
+- [x] Versão desktop instalável (Electron)
 - [x] Testes de interface (Playwright)
 - [ ] Importar extrato da corretora (CSV)
 - [x] Integração contínua com GitHub Actions rodando os testes a cada push
