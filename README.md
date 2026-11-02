@@ -29,7 +29,8 @@ e não mostrava quanto cada parte realmente rendeu. O app responde a três pergu
 | Aba | O que faz |
 |---|---|
 | **Início** | Três abas para não misturar tudo: **Este mês** (quanto sobrou e para onde vai, assistente de aporte, previsto x realizado, saldo até o fim do mês, avisos de orçamento e de Selic/CDI novos), **Carteira** (patrimônio, onde está o dinheiro comparado com o plano e **patrimônio líquido**: investimentos menos dívidas) e **Metas** (meta de patrimônio e reserva de emergência) |
-| **FIIs e Ações** | Compra e venda, preço médio, cotação automática (Yahoo Finance), **dividend yield** dos últimos 12 meses e sobre o preço pago (*yield on cost*), renda mensal estimada e calendário de dividendos |
+| **Página de cada bucket** | Abre ao clicar no bucket em **Carteira** (não fica no menu lateral). Saldo, aportado, rendimento, aporte do mês previsto x realizado, curva de evolução e lançamentos. Lá ficam aporte avulso, saque, taxa, cotação e edição. O aporte do mês é feito no Início, em *Quanto sobrou esse mês?* → **aportei** |
+| **FIIs e Ações** | Abre ao clicar em FIIs e Ações na **Carteira**. Compra e venda, preço médio, cotação automática (Yahoo Finance), **dividend yield** dos últimos 12 meses e sobre o preço pago (*yield on cost*), renda mensal estimada e calendário de dividendos |
 | **Saques e gastos** | Histórico com filtro, gráfico por categoria e exportação CSV |
 | **Gastos mensais** | Planilha por quinzena (dia 15 e dia 30) com "duplicar mês" para até 12 meses contas fixas (📌) que se repetem sozinhas, parcelas com fim, categorias com gráfico, **orçamento por categoria** (aviso a 80% e ao passar do limite), um único **resumo do mês** (sobra, % da renda em contas, dia 15 x dia 30) e marcação de contas pagas |
 | **Relatório** | Lançamentos por dia, semana ou mês, evolução do patrimônio e CSV |

@@ -137,15 +137,17 @@ export default function useFinanceData() {
   const updateDollarRate = (id, rate) => db.buckets.update(id, { current_dollar_rate: Number(rate), dollar_rate_updated_date: today() });
 
   // ---------- Aporte mensal ----------
-  const mark = async (bucket, total, dollarRate) => {
+  // `amount`: o valor que você aportou de verdade. Sem ele, vale a divisão (total × % do bucket).
+  const mark = async (bucket, total, dollarRate, amount) => {
     if (!total) throw new Error('Informe quanto sobrou neste mês.');
+    if (amount != null && !(Number(amount) > 0)) throw new Error('Informe um valor maior que zero.');
     const month = monthKey();
     const item = {
       bucket_id: bucket.id,
       bucket_name: bucket.name,
       color: bucket.color,
       percentage: bucket.percentage,
-      amount: round((total * bucket.percentage) / 100)
+      amount: round(amount != null ? Number(amount) : (total * bucket.percentage) / 100)
     };
     if (bucket.rate_type === 'fed' && dollarRate) {
       item.dollar_rate = Number(dollarRate);
