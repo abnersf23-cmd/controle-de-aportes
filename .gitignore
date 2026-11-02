@@ -12,3 +12,4 @@ dados-*.json
 *.local
 test-results
 playwright-report
+release

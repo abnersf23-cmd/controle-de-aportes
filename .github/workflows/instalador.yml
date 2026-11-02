@@ -1,0 +1,42 @@
+# Gera o instalador do app desktop para Windows (.exe) num computador Windows do GitHub.
+# Onde baixar: aba "Actions" > "Instalador Windows" > execução > seção "Artifacts".
+name: Instalador Windows
+
+on:
+  workflow_dispatch: # botão "Run workflow" na aba Actions
+  push:
+    tags: ['v*'] # ex.: git tag v1.1.0 && git push --tags
+  pull_request:
+    paths: ['electron/**', 'build/**', 'package.json', 'package-lock.json', '.github/workflows/instalador.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar o Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Rodar os testes
+        run: npm test
+
+      - name: Gerar o instalador
+        run: npm run dist:win
+
+      - name: Guardar o instalador
+        uses: actions/upload-artifact@v4
+        with:
+          name: instalador-windows
+          path: release/*.exe
+          retention-days: 30

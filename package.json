@@ -12,30 +12,62 @@
     "test:e2e": "playwright test",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
-  },
-  "dependencies": {
-    "dexie": "^4.0.11",
-    "dexie-react-hooks": "^1.1.7",
-    "lucide-react": "^0.475.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "recharts": "^2.15.4"
+    "format:check": "prettier --check .",
+    "desktop": "vite build && electron .",
+    "dist:win": "vite build && electron-builder --win nsis --publish never"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "@playwright/test": "^1.63.0",
     "@vitejs/plugin-react": "^4.4.1",
     "autoprefixer": "^10.4.21",
+    "dexie": "^4.0.11",
+    "dexie-react-hooks": "^1.1.7",
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0",
     "eslint": "^9.39.5",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "fake-indexeddb": "^6.0.1",
     "globals": "^17.13.0",
+    "lucide-react": "^0.475.0",
     "postcss": "^8.5.3",
     "prettier": "^3.9.10",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.15.4",
     "tailwindcss": "^3.4.17",
     "vite": "^6.3.5",
     "vitest": "^5.0.5"
+  },
+  "main": "electron/main.js",
+  "author": "Abner",
+  "build": {
+    "appId": "br.abner.controle-aportes",
+    "productName": "Controle de Aportes",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "!electron/**/*.test.js",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png",
+      "artifactName": "Controle-de-Aportes-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Controle de Aportes",
+      "deleteAppDataOnUninstall": false
+    }
   }
 }
