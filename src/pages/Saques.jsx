@@ -8,6 +8,7 @@ import WithdrawalForm from '@/components/forms/WithdrawalForm';
 import downloadCsv from '@/lib/csv';
 import { brl, usd, dateLabel, withdrawalBrl, monthKey } from '@/lib/finance';
 import { today } from '@/lib/dates';
+import { withdrawalCategories } from '@/lib/withdrawalCategories';
 
 export const categoryColors = {
   emergência: '#EF4444',
@@ -140,6 +141,7 @@ export default function Saques({ data }) {
       <Modal open={adding} title="Registrar saque ou gasto" onClose={() => setAdding(false)}>
         <WithdrawalForm
           buckets={buckets}
+          categories={withdrawalCategories(data.withdrawals)}
           onCancel={() => setAdding(false)}
           onSave={async f => {
             if (await run(() => data.addWithdrawal(f), 'Saque/gasto registrado.')) setAdding(false);

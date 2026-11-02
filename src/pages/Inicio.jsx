@@ -20,6 +20,7 @@ import { Notice, Segmented, Stat } from '@/components/ui/Bits';
 import { useAction } from '@/components/ui/Toast';
 import BucketForm from '@/components/forms/BucketForm';
 import WithdrawalForm from '@/components/forms/WithdrawalForm';
+import { withdrawalCategories } from '@/lib/withdrawalCategories';
 import ExtraForm from '@/components/forms/ExtraForm';
 import RateForm from '@/components/forms/RateForm';
 import DollarRateForm from '@/components/forms/DollarRateForm';
@@ -340,7 +341,12 @@ export default function Inicio({ data, goTo }) {
           />
         )}
         {modal?.kind === 'withdraw' && (
-          <WithdrawalForm bucket={b} onCancel={close} onSave={f => done(() => data.addWithdrawal(f), 'Saque/gasto registrado.')} />
+          <WithdrawalForm
+            bucket={b}
+            categories={withdrawalCategories(withdrawals)}
+            onCancel={close}
+            onSave={f => done(() => data.addWithdrawal(f), 'Saque/gasto registrado.')}
+          />
         )}
         {modal?.kind === 'rate' && <RateForm bucket={b} onCancel={close} onSave={f => done(() => data.updateRate(b.id, f), 'Taxa atualizada.')} />}
         {modal?.kind === 'dollar' && (

@@ -4,9 +4,12 @@ import DollarInput from './DollarInput';
 import { today } from '@/lib/dates';
 import { brl } from '@/lib/finance';
 
-export const WITHDRAWAL_CATEGORIES = ['outros', 'emergência', 'lazer', 'investimento', 'moradia', 'alimentação'];
+import { DEFAULT_WITHDRAWAL_CATEGORIES, matchCategory } from '@/lib/withdrawalCategories';
 
-export default function WithdrawalForm({ bucket, buckets, onSave, onCancel }) {
+const label = c => c[0].toUpperCase() + c.slice(1);
+
+// `categories`: sugestões (padrão + as que você já criou). Dá para digitar qualquer outra.
+export default function WithdrawalForm({ bucket, buckets, categories = DEFAULT_WITHDRAWAL_CATEGORIES, onSave, onCancel }) {
   const [form, setForm] = useState({
     bucket_id: bucket?.id || buckets?.find(b => b.kind !== 'stocks')?.id || '',
     date: today(),
@@ -24,7 +27,7 @@ export default function WithdrawalForm({ bucket, buckets, onSave, onCancel }) {
     <form
       onSubmit={e => {
         e.preventDefault();
-        onSave({ ...form, bucket_id: current.id, dollar_rate: isDollar ? dollarRate : '' });
+        onSave({ ...form, category: matchCategory(form.category, categories), bucket_id: current.id, dollar_rate: isDollar ? dollarRate : '' });
       }}
       className="grid grid-cols-2 gap-3"
     >
@@ -68,16 +71,35 @@ export default function WithdrawalForm({ bucket, buckets, onSave, onCancel }) {
           <p className="mt-1 text-xs text-muted">Equivale a {brl(Number(form.amount) * Number(dollarRate || 0))}</p>
         </div>
       )}
-      <Field label="Categoria">
-        <select value={form.category} onChange={e => set('category', e.target.value)} className="field">
-          {WITHDRAWAL_CATEGORIES.map(c => (
-            <option key={c} value={c}>
-              {c[0].toUpperCase() + c.slice(1)}
-            </option>
+      <Field label="Categoria" hint="Escolha uma ou digite uma nova." className="col-span-2">
+        <input
+          list="withdrawal-categories"
+          value={form.category}
+          onChange={e => set('category', e.target.value)}
+          onFocus={e => e.target.select()}
+          placeholder="Ex.: carro, presente, viagem"
+          maxLength={40}
+          className="field"
+        />
+        <datalist id="withdrawal-categories">
+          {categories.map(c => (
+            <option key={c} value={c} />
           ))}
-        </select>
+        </datalist>
       </Field>
-      <Field label="Observação">
+      <div className="col-span-2 -mt-1 flex flex-wrap gap-1.5">
+        {categories.slice(0, 12).map(c => (
+          <button
+            type="button"
+            key={c}
+            onClick={() => set('category', c)}
+            className={`chip transition ${matchCategory(form.category, categories) === c ? 'bg-accent/15 text-accent' : 'bg-surface2 text-muted hover:text-ink'}`}
+          >
+            {label(c)}
+          </button>
+        ))}
+      </div>
+      <Field label="Observação" className="col-span-2">
         <input value={form.note} onChange={e => set('note', e.target.value)} placeholder="Opcional" className="field" />
       </Field>
       <div className="col-span-2 flex justify-end gap-2">
