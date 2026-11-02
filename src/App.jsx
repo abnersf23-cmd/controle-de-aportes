@@ -14,7 +14,8 @@ import {
   Search,
   Settings2,
   Sun,
-  TrendingUp
+  TrendingUp,
+  Wallet
 } from 'lucide-react';
 import { db } from '@/db/database';
 import useFinanceData from '@/hooks/useFinanceData';
@@ -30,6 +31,7 @@ import Saques from '@/pages/Saques';
 import GastosMensais from '@/pages/GastosMensais';
 import Relatorio from '@/pages/Relatorio';
 import Evolucao from '@/pages/Evolucao';
+import Bucket from '@/pages/Bucket';
 import Fechamento from '@/pages/Fechamento';
 import Gerenciar from '@/pages/Gerenciar';
 import Projecao from '@/pages/Projecao';
@@ -50,7 +52,7 @@ const PAGES = [
     group: 'Dia a dia',
     keywords: 'contas planilha vale pagamento orçamento'
   },
-  { id: 'acoes', label: 'FIIs e Ações', icon: TrendingUp, Component: Acoes, group: 'Dia a dia', keywords: 'dividendos cotação compra venda' },
+  { id: 'acoes', label: 'FIIs e Ações', icon: TrendingUp, Component: Acoes, group: 'Dia a dia', keywords: 'dividendos cotação compra venda', hidden: true },
   { id: 'saques', label: 'Saques e gastos', icon: Receipt, Component: Saques, group: 'Dia a dia', keywords: 'retirada' },
   {
     id: 'evolucao',
@@ -72,10 +74,14 @@ const PAGES = [
     keywords: 'aposentadoria consignado comparador antecipar juros'
   },
   { id: 'gerenciar', label: 'Gerenciar ativos', icon: Settings2, Component: Gerenciar, group: 'Ajustes', keywords: 'buckets taxas percentuais' },
-  { id: 'backup', label: 'Backup', icon: Database, Component: Backup, group: 'Ajustes', keywords: 'exportar importar senha' }
+  { id: 'backup', label: 'Backup', icon: Database, Component: Backup, group: 'Ajustes', keywords: 'exportar importar senha' },
+  // Páginas com hidden: true (FIIs e Ações e cada bucket) não aparecem no menu:
+  // abrem só ao clicar no bucket na Carteira. #bucket/<id> é a página de um bucket.
+  { id: 'bucket', label: 'Bucket', icon: Wallet, Component: Bucket, hidden: true }
 ];
+const MENU = PAGES.filter(p => !p.hidden);
 const GROUPS = ['Dia a dia', 'Análises', 'Ajustes'];
-const MOBILE = ['inicio', 'gastos', 'acoes', 'simuladores'];
+const MOBILE = ['inicio', 'gastos', 'evolucao', 'simuladores'];
 
 const readTab = () => {
   const t = window.location.hash.slice(1).split('/')[0];
@@ -136,7 +142,7 @@ export default function App() {
   };
   const searchItems = useMemo(
     () => [
-      ...PAGES.map(p => ({ group: 'Abas', label: p.label, icon: p.icon, keywords: p.keywords, run: () => goTo(p.id) })),
+      ...MENU.map(p => ({ group: 'Abas', label: p.label, icon: p.icon, keywords: p.keywords, run: () => goTo(p.id) })),
       ...[
         ['mes', 'Este mês'],
         ['carteira', 'Carteira'],
@@ -149,7 +155,7 @@ export default function App() {
         run: () => goTo(`inicio/${id}`)
       })),
       ...SIMULATORS.map(x => ({ group: 'Simulador', label: x.label, hint: x.hint, icon: Calculator, run: () => goTo(`simuladores/${x.value}`) })),
-      ...data.buckets.map(b => ({ group: 'Bucket', label: b.name, emoji: b.icon, run: () => goTo(b.kind === 'stocks' ? 'acoes' : 'inicio/carteira') })),
+      ...data.buckets.map(b => ({ group: 'Bucket', label: b.name, emoji: b.icon, run: () => goTo(b.kind === 'stocks' ? 'acoes' : `bucket/${b.id}`) })),
       ...data.stocks.map(st => ({ group: 'Ativo', label: st.ticker, hint: st.name, emoji: '📈', run: () => goTo('acoes') })),
       ...(bills || [])
         .filter(i => String(i.name || '').trim())
@@ -198,11 +204,11 @@ export default function App() {
             <div key={g}>
               <p className="mb-1 px-3 text-[10px] font-bold uppercase tracking-wider text-faint">{g}</p>
               <div className="space-y-0.5">
-                {PAGES.filter(p => p.group === g).map(p => (
+                {MENU.filter(p => p.group === g).map(p => (
                   <button
                     key={p.id}
                     onClick={() => goTo(p.id)}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition ${tab === p.id ? 'bg-accent/10 text-accent' : 'text-muted hover:bg-surface2 hover:text-ink'}`}
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition ${tab === p.id || (page.hidden && p.id === 'inicio') ? 'bg-accent/10 text-accent' : 'text-muted hover:bg-surface2 hover:text-ink'}`}
                   >
                     <p.icon size={18} /> {p.label}
                   </button>
@@ -225,7 +231,8 @@ export default function App() {
             <Search size={18} />
           </button>
           <select value={tab} onChange={e => goTo(e.target.value)} className="field mt-0 w-auto py-1.5 text-xs" aria-label="Ir para">
-            {PAGES.map(p => (
+            {page.hidden && <option value={tab}>{page.label}</option>}
+            {MENU.map(p => (
               <option key={p.id} value={p.id}>
                 {p.label}
               </option>

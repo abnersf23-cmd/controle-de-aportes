@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowRight, Check, Eye, EyeOff, LineChart, PiggyBank, Sunset, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import { ArrowRight, Check, Eye, EyeOff, LineChart, PiggyBank, Sunset, TrendingDown, TrendingUp, Undo2, Wallet } from 'lucide-react';
 import BucketCard from '@/components/cards/BucketCard';
 import CategoryCard from '@/components/cards/CategoryCard';
 import StockBucketCard from '@/components/cards/StockBucketCard';
@@ -19,10 +19,6 @@ import Modal from '@/components/ui/Modal';
 import { Notice, Segmented, Stat } from '@/components/ui/Bits';
 import { useAction } from '@/components/ui/Toast';
 import BucketForm from '@/components/forms/BucketForm';
-import WithdrawalForm from '@/components/forms/WithdrawalForm';
-import { withdrawalCategories } from '@/lib/withdrawalCategories';
-import ExtraForm from '@/components/forms/ExtraForm';
-import RateForm from '@/components/forms/RateForm';
 import DollarRateForm from '@/components/forms/DollarRateForm';
 import {
   brl,
@@ -50,12 +46,9 @@ const PIES = [
   { value: 'variavel', label: 'Variável' }
 ];
 
+// Aporte avulso, saque, taxa e edição de um bucket ficam na página do bucket (#bucket/<id>).
 const titles = {
-  extra: 'Aporte avulso',
-  withdraw: 'Registrar saque ou gasto',
-  rate: 'Atualizar taxa',
   dollar: 'Atualizar cotação do dólar',
-  edit: 'Editar bucket',
   mark: 'Confirmar aporte em dólar',
   add: 'Novo bucket'
 };
@@ -109,7 +102,8 @@ export default function Inicio({ data, goTo }) {
     if (kind === 'unmark') return run(() => data.unmark(bucket.id), 'Aporte do mês desmarcado.');
     setModal({ kind, bucket });
   };
-  const renderBucket = ({ b, bal }) => <BucketCard key={b.id} bucket={b} balance={bal} total={total} marked={isMarked(b)} onAction={onAction} />;
+  const openBucket = x => goTo(`bucket/${x.id}`);
+  const renderBucket = ({ b, bal }) => <BucketCard key={b.id} bucket={b} balance={bal} marked={isMarked(b)} onOpen={openBucket} />;
   const done = async (fn, msg, opts) => {
     if (await run(fn, msg, opts)) close();
   };
@@ -209,9 +203,19 @@ export default function Inicio({ data, goTo }) {
                             comprar
                           </button>
                         ) : isMarked(x) ? (
-                          <span className="chip bg-good/10 text-good">
-                            <Check size={12} /> feito
-                          </span>
+                          <>
+                            <span className="chip bg-good/10 text-good">
+                              <Check size={12} /> feito
+                            </span>
+                            <button
+                              className="btn-ghost p-1 text-faint hover:text-bad"
+                              onClick={() => onAction('unmark', x)}
+                              aria-label={`Desfazer aporte em ${x.name}`}
+                              title="Desfazer"
+                            >
+                              <Undo2 size={13} />
+                            </button>
+                          </>
                         ) : (
                           <button className="btn-ghost px-2 py-1 text-xs font-semibold text-accent" onClick={() => onAction('mark', x)}>
                             aportei
@@ -326,29 +330,7 @@ export default function Inicio({ data, goTo }) {
         </div>
       )}
 
-      <Modal open={!!modal} title={titles[modal?.kind]} subtitle={b?.name} onClose={close} wide={modal?.kind === 'edit' || modal?.kind === 'add'}>
-        {modal?.kind === 'extra' && (
-          <ExtraForm
-            bucket={b}
-            extras={extras}
-            onCancel={close}
-            onDelete={e =>
-              run(() => data.deleteExtraContribution(e.id), 'Aporte avulso excluído.', {
-                action: { label: 'Desfazer', onClick: () => data.restore('extras', e) }
-              })
-            }
-            onSave={f => done(() => data.addExtraContribution({ ...f, bucket_id: b.id }), 'Aporte avulso registrado.')}
-          />
-        )}
-        {modal?.kind === 'withdraw' && (
-          <WithdrawalForm
-            bucket={b}
-            categories={withdrawalCategories(withdrawals)}
-            onCancel={close}
-            onSave={f => done(() => data.addWithdrawal(f), 'Saque/gasto registrado.')}
-          />
-        )}
-        {modal?.kind === 'rate' && <RateForm bucket={b} onCancel={close} onSave={f => done(() => data.updateRate(b.id, f), 'Taxa atualizada.')} />}
+      <Modal open={!!modal} title={titles[modal?.kind]} subtitle={b?.name} onClose={close} wide={modal?.kind === 'add'}>
         {modal?.kind === 'dollar' && (
           <DollarRateForm
             currentRate={b.current_dollar_rate}
@@ -363,30 +345,6 @@ export default function Inicio({ data, goTo }) {
             hint={`Informe a cotação usada na compra dos dólares. Equivale a ≈ US$ ${((total * b.percentage) / 100 / (b.last_dollar_rate || b.current_dollar_rate || 1)).toFixed(2)}.`}
             onCancel={close}
             onSave={r => done(() => data.mark(b, total, r), 'Aporte em dólar registrado.')}
-          />
-        )}
-        {modal?.kind === 'edit' && (
-          <BucketForm
-            bucket={b}
-            allowPercentage
-            onCancel={close}
-            onSave={f =>
-              done(
-                () =>
-                  data.updateBucket(b.id, {
-                    name: f.name,
-                    icon: f.icon,
-                    color: f.color,
-                    category: f.category,
-                    percentage: Number(f.percentage),
-                    rate_type: f.rate_type,
-                    base_rate: Number(f.base_rate),
-                    management_fee: Number(f.management_fee),
-                    cdi_percentage: Number(f.cdi_percentage)
-                  }),
-                'Bucket atualizado.'
-              )
-            }
           />
         )}
         {modal?.kind === 'add' && (

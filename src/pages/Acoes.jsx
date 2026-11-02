@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Minus, Pencil, Plus, RefreshCw, Trash2, TrendingDown, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Minus, Pencil, Plus, RefreshCw, Trash2, TrendingDown, TrendingUp } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { Empty, PageHeader, Stat } from '@/components/ui/Bits';
 import { useAction } from '@/components/ui/Toast';
@@ -150,7 +150,7 @@ function AssetCard({ stock, quote, onTrade, onEdit, onDeleteOp, onRemove }) {
   );
 }
 
-export default function Acoes({ data }) {
+export default function Acoes({ data, goTo }) {
   const { stocks, quotes, quotesLoading, quotesUpdatedAt } = data;
   const run = useAction(),
     confirm = useConfirm();
@@ -179,6 +179,9 @@ export default function Acoes({ data }) {
 
   return (
     <div className="space-y-5">
+      <button onClick={() => goTo('inicio/carteira')} className="btn-ghost -ml-2 text-sm">
+        <ArrowLeft size={16} /> Carteira
+      </button>
       <PageHeader title="FIIs e Ações" subtitle="Compras, vendas, cotações e dividendos. Tudo entra no total aportado.">
         <button onClick={refresh} disabled={quotesLoading} className="btn-secondary">
           <RefreshCw size={16} className={quotesLoading ? 'animate-spin' : ''} /> Atualizar cotações
