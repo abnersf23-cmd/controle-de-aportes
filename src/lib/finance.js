@@ -348,29 +348,3 @@ export function milestones(currentBalance, monthly, annualRate, inflation = 0, t
     monthsReal: goalProjection(currentBalance, monthly, real, target)
   }));
 }
-
-export function patrimonyEvolution(buckets, records, extras, withdrawals, stocks = []) {
-  const allDates = [
-    ...records.flatMap(r => (r.allocations || []).map(() => `${r.month}-01`)),
-    ...extras.map(e => e.date),
-    ...withdrawals.map(w => w.date),
-    ...stocks.flatMap(s => (s.contributions || []).map(c => c.date))
-  ]
-    .filter(Boolean)
-    .sort();
-  if (!allDates.length) return [];
-  const start = toDate(`${allDates[0].slice(0, 7)}-01`);
-  const now = new Date();
-  const points = [];
-  let d = new Date(start);
-  while (d <= now) {
-    const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
-    const asOf = monthEnd > now ? now : monthEnd;
-    points.push({
-      month: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-      balance: round(totalBalance(buckets, records, extras, withdrawals, asOf, stocks))
-    });
-    d = new Date(d.getFullYear(), d.getMonth() + 1, 1);
-  }
-  return points;
-}

@@ -8,6 +8,7 @@ import {
   Database,
   Home,
   LineChart,
+  Milestone,
   Moon,
   Receipt,
   Search,
@@ -19,6 +20,7 @@ import { db } from '@/db/database';
 import useFinanceData from '@/hooks/useFinanceData';
 import useAutoBackup from '@/hooks/useAutoBackup';
 import useMonthClose from '@/hooks/useMonthClose';
+import usePatrimonySnapshot from '@/hooks/usePatrimonySnapshot';
 import BackupBanner from '@/components/BackupBanner';
 import CommandPalette from '@/components/CommandPalette';
 import MonthCloseBanner from '@/components/MonthCloseBanner';
@@ -27,6 +29,7 @@ import Acoes from '@/pages/Acoes';
 import Saques from '@/pages/Saques';
 import GastosMensais from '@/pages/GastosMensais';
 import Relatorio from '@/pages/Relatorio';
+import Evolucao from '@/pages/Evolucao';
 import Fechamento from '@/pages/Fechamento';
 import Gerenciar from '@/pages/Gerenciar';
 import Projecao from '@/pages/Projecao';
@@ -49,6 +52,14 @@ const PAGES = [
   },
   { id: 'acoes', label: 'FIIs e Ações', icon: TrendingUp, Component: Acoes, group: 'Dia a dia', keywords: 'dividendos cotação compra venda' },
   { id: 'saques', label: 'Saques e gastos', icon: Receipt, Component: Saques, group: 'Dia a dia', keywords: 'retirada' },
+  {
+    id: 'evolucao',
+    label: 'Evolução',
+    icon: Milestone,
+    Component: Evolucao,
+    group: 'Análises',
+    keywords: 'patrimônio histórico linha do tempo progresso gráfico marcos'
+  },
   { id: 'fechamento', label: 'Fechamento do mês', icon: CalendarCheck, Component: Fechamento, group: 'Análises', keywords: 'resumo imprimir pdf' },
   { id: 'relatorio', label: 'Relatório', icon: BarChart3, Component: Relatorio, group: 'Análises', keywords: 'evolução csv lançamentos' },
   { id: 'projecao', label: 'Projeção', icon: LineChart, Component: Projecao, group: 'Análises', keywords: 'futuro crescimento inflação metas milhão' },
@@ -98,6 +109,7 @@ export default function App() {
   const bills = useLiveQuery(async () => (await db.expenses.where('month').equals(month).first())?.items || [], [month]);
   useAutoBackup(!!onboarded);
   useMonthClose(!!onboarded);
+  usePatrimonySnapshot(data, !!onboarded);
   useEffect(() => {
     const onHash = () => setTab(readTab());
     window.addEventListener('hashchange', onHash);
