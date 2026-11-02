@@ -30,6 +30,10 @@ test('"aportei" no Quanto sobrou registra o aporte e a página do bucket mostra 
   await page.getByLabel('Quanto sobrou esse mês').fill('1000');
   await page.getByLabel('Quanto sobrou esse mês').press('Enter');
   await page.getByRole('button', { name: 'aportei' }).first().click(); // 💵 Caixa, 40%
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /Confirmar/ })
+    .click();
   await expect(page.getByText('Aporte de R$ 400,00 registrado em Caixa.')).toBeVisible();
 
   await goTo(page, 'inicio/carteira');
@@ -50,6 +54,10 @@ test('desfazer o "aportei" direto no Quanto sobrou', async ({ page }) => {
   await page.getByLabel('Quanto sobrou esse mês').fill('1000');
   await page.getByLabel('Quanto sobrou esse mês').press('Enter');
   await page.getByRole('button', { name: 'aportei' }).first().click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /Confirmar/ })
+    .click();
   await expect(page.getByText('feito')).toBeVisible();
   await page.getByRole('button', { name: 'Desfazer aporte em Caixa' }).click();
   await expect(page.getByText('Aporte do mês desmarcado.')).toBeVisible();
@@ -68,4 +76,30 @@ test('menu lateral não mostra FIIs e Ações nem os buckets: só abrem pela Car
   await expect(page).toHaveURL(/#acoes$/);
   await expect(page.getByRole('heading', { name: 'FIIs e Ações' })).toBeVisible();
   await expect(menu.getByRole('button', { name: 'Início' })).toHaveClass(/text-accent/); // Início fica marcado
+});
+
+test('"aportei" deixa corrigir o valor e o previsto x realizado conta o valor real', async ({ page }) => {
+  await startFresh(page);
+  await page.getByLabel('Quanto sobrou esse mês').fill('1000');
+  await page.getByLabel('Quanto sobrou esse mês').press('Enter');
+  await page.getByRole('button', { name: 'aportei' }).first().click(); // 💵 Caixa: divisão de R$ 400
+  const dialog = page.getByRole('dialog');
+  const valor = dialog.getByLabel('Quanto você aportou (R$)');
+  await expect(valor).toHaveValue('400');
+  await valor.fill('410');
+  await expect(dialog).toContainText('R$ 10,00 a mais');
+  await dialog.getByRole('button', { name: 'Confirmar R$ 410,00' }).click();
+  await expect(page.getByText('Aporte de R$ 410,00 registrado em Caixa.')).toBeVisible();
+
+  // Plano padrão de R$ 600: Caixa previsto R$ 240, realizado R$ 410.
+  const card = page.locator('section', { has: page.getByRole('heading', { name: 'Previsto x realizado' }) });
+  await expect(card.getByRole('row', { name: /Caixa/ })).toContainText('R$ 410,00');
+
+  // Um aporte avulso no mesmo mês também entra no realizado.
+  await goTo(page, 'inicio/carteira');
+  await page.getByRole('button', { name: 'Abrir Caixa' }).click();
+  await page.getByRole('button', { name: 'Aporte avulso' }).click();
+  await page.getByRole('dialog').getByLabel('Valor (R$)').fill('50');
+  await page.getByRole('dialog').getByRole('button', { name: 'Adicionar aporte' }).click();
+  await expect(page.getByText(/realizado\s*R\$\s460,00/)).toBeVisible();
 });

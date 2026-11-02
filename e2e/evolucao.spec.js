@@ -7,6 +7,10 @@ test('evolução: o aporte do mês entra na linha do tempo, no total e no ativo'
   await page.getByLabel('Quanto sobrou esse mês').fill('1000');
   await page.getByLabel('Quanto sobrou esse mês').press('Enter');
   await page.getByRole('button', { name: 'aportei' }).first().click(); // primeiro da lista: 💵 Caixa
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /Confirmar/ })
+    .click();
   await expect(page.getByText('Aporte de R$ 400,00 registrado em Caixa.')).toBeVisible();
 
   await goTo(page, 'evolucao');
@@ -32,6 +36,10 @@ test('evolução: um saque registrado aparece na hora na linha do tempo', async 
   await page.getByLabel('Quanto sobrou esse mês').fill('1000');
   await page.getByLabel('Quanto sobrou esse mês').press('Enter');
   await page.getByRole('button', { name: 'aportei' }).first().click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /Confirmar/ })
+    .click();
   await expect(page.getByText('Aporte de R$ 400,00 registrado em Caixa.')).toBeVisible();
 
   await goTo(page, 'evolucao');
