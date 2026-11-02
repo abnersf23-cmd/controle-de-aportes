@@ -219,7 +219,7 @@ src/
   hooks/        useFinanceData, useExpenses, useAutoBackup (ligam banco e tela)
   services/     quotes.js (Yahoo / dólar), rates.js (Banco Central), autoBackup.js
 electron/       main.js (janela + proxy do app desktop), proxyRoutes.js (rotas de internet, usadas também pelo Vite)
-build/          ícone do app desktop (icon.png) e opções em icones/
+build/          ícone do app desktop (icon.png, gerado de icones/b-cofrinho.svg) e outras opções em icones/
   pages/        uma tela por aba
   components/   cards, formulários, gráficos (charts/), planilha de gastos (gastos/), simuladores/ e peças de interface
 exemplo/        carteira fictícia para testar o app
