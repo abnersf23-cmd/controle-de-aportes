@@ -1,10 +1,21 @@
 import { useMemo, useState } from 'react';
-import { Activity, ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, Download, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import {
+  Activity,
+  ArrowDownRight,
+  ArrowRight,
+  Milestone,
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  TrendingDown,
+  TrendingUp,
+  Wallet
+} from 'lucide-react';
 import { Empty, PageHeader, Segmented, Stat } from '@/components/ui/Bits';
-import PatrimonyChart from '@/components/charts/PatrimonyChart';
 import downloadCsv from '@/lib/csv';
 import { today, toDateKey } from '@/lib/dates';
-import { brl, usd, dateLabel, monthLabel, totalBalance, round, patrimonyEvolution, withdrawalBrl } from '@/lib/finance';
+import { brl, usd, dateLabel, monthLabel, totalBalance, round, withdrawalBrl } from '@/lib/finance';
 
 const typeMeta = {
   aporte: { label: 'Aporte', icon: ArrowUpRight, cls: 'bg-good/10 text-good' },
@@ -30,7 +41,7 @@ function shift(ref, period, dir) {
   return toDateKey(d);
 }
 
-export default function Relatorio({ data }) {
+export default function Relatorio({ data, goTo }) {
   const { records, extras, withdrawals, buckets, stocks } = data;
   const [period, setPeriod] = useState('mes');
   const [ref, setRef] = useState(today());
@@ -99,7 +110,6 @@ export default function Relatorio({ data }) {
   const outSum = filtered.filter(t => t.type !== 'aporte').reduce((s, t) => s + toBrl(t), 0);
   const net = inSum - outSum;
 
-  const evolution = useMemo(() => patrimonyEvolution(buckets, records, extras, withdrawals, stocks), [buckets, records, extras, withdrawals, stocks]);
   const variation = useMemo(() => {
     const now = new Date();
     const cur = totalBalance(buckets, records, extras, withdrawals, now, stocks);
@@ -164,7 +174,14 @@ export default function Relatorio({ data }) {
           tone={variation == null ? 'ink' : variation >= 0 ? 'good' : 'bad'}
         />
       </section>
-      <PatrimonyChart data={evolution} />
+      <button onClick={() => goTo('evolucao')} className="card lift flex w-full items-center gap-3 p-4 text-left">
+        <Milestone size={20} className="text-accent" />
+        <span className="flex-1">
+          <strong className="block">Evolução do patrimônio</strong>
+          <span className="text-xs text-muted">Linha do tempo com todos os aportes, ativo por ativo, e os marcos de R$ 10 mil a R$ 1 milhão.</span>
+        </span>
+        <ArrowRight size={18} className="text-muted" />
+      </button>
       <p className="text-sm font-medium text-muted">
         {filtered.length} lançamento{filtered.length !== 1 ? 's' : ''} no período
       </p>
