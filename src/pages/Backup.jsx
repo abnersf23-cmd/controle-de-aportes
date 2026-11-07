@@ -22,8 +22,12 @@ export async function downloadBackup(password) {
   await db.settings.put({ key: 'lastBackup', value: new Date().toISOString() });
 }
 
+// Um backup real tem poucos MB. Arquivo gigante é engano (ou adulteração) e travaria o app.
+export const MAX_BACKUP_BYTES = 50 * 1024 * 1024;
+
 export function readJsonFile(file) {
   return new Promise((resolve, reject) => {
+    if (file.size > MAX_BACKUP_BYTES) return reject(new Error('Arquivo grande demais para ser um backup (limite de 50 MB).'));
     const reader = new FileReader();
     reader.onload = () => {
       try {
