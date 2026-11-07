@@ -1,7 +1,7 @@
 // Backup com senha, usando a Web Crypto API (já vem no navegador, sem biblioteca).
 //
 // Como funciona:
-// 1. PBKDF2 transforma a senha numa chave de 256 bits. Ele repete o cálculo 310 mil vezes
+// 1. PBKDF2 transforma a senha numa chave de 256 bits. Ele repete o cálculo 600 mil vezes
 //    (de propósito): para quem tenta adivinhar a senha, cada tentativa fica cara.
 //    O "sal" (salt) aleatório faz a mesma senha gerar chaves diferentes em cada arquivo.
 // 2. AES-GCM criptografa o backup com essa chave. O GCM também detecta se o arquivo foi
@@ -9,7 +9,13 @@
 // A senha não é guardada em lugar nenhum: se você esquecer, o arquivo não abre.
 export const ENCRYPTED_FORMAT = 'controle-aportes-backup-criptografado';
 export const MIN_PASSWORD = 8;
-const ITERATIONS = 310000;
+// 600 mil é o mínimo recomendado hoje pela OWASP para PBKDF2-SHA256 (antes eram 310 mil).
+// Backups antigos guardam o próprio número de repetições, então continuam abrindo.
+const ITERATIONS = 600000;
+// Limites para o número de repetições lido do ARQUIVO. Sem eles, um arquivo adulterado
+// poderia pedir 1 repetição (chave fraca) ou 1 bilhão (o app trava calculando).
+export const MIN_ITERATIONS = 100000;
+export const MAX_ITERATIONS = 5000000;
 const enc = new TextEncoder(),
   dec = new TextDecoder();
 
@@ -44,8 +50,17 @@ export async function encryptJson(value, password) {
 
 export async function decryptJson(file, password) {
   if (!isEncrypted(file)) throw new Error('Este arquivo não é um backup com senha.');
+  const iterations = Number(file.kdf?.iterations);
+  if (
+    file.kdf?.name !== 'PBKDF2' ||
+    file.cipher?.name !== 'AES-GCM' ||
+    !Number.isInteger(iterations) ||
+    iterations < MIN_ITERATIONS ||
+    iterations > MAX_ITERATIONS
+  )
+    throw new Error('Arquivo de backup com senha inválido ou adulterado.');
   try {
-    const key = await deriveKey(password, fromB64(file.kdf.salt), Number(file.kdf.iterations));
+    const key = await deriveKey(password, fromB64(file.kdf.salt), iterations);
     const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(file.cipher.iv) }, key, fromB64(file.data));
     return JSON.parse(dec.decode(plain));
   } catch {

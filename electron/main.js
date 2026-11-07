@@ -11,13 +11,16 @@
 //    proxy do Vite (electron/proxyRoutes.js). A página nunca ganha acesso ao Node.
 //
 // Segurança: contextIsolation + sandbox ligados, nodeIntegration desligado, sem preload
-// (a página não recebe nenhuma função extra), links externos abrem no navegador padrão
-// e só três destinos de internet são aceitos.
+// (a página não recebe nenhuma função extra), links externos abrem no navegador padrão,
+// só três destinos de internet são aceitos, a página tem uma CSP (electron/security.js)
+// e só recebe as permissões da lista. O executável também vem "travado" pelos fuses
+// (package.json > build > electronFuses).
 import { app, BrowserWindow, Menu, net, protocol, session, shell } from 'electron';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveProxyUrl } from './proxyRoutes.js';
+import { ALLOWED_PERMISSIONS, CSP } from './security.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST = path.join(__dirname, '..', 'dist');
@@ -25,6 +28,8 @@ const SCHEME = 'app';
 const HOST = 'controle-aportes';
 const ORIGIN = `${SCHEME}://${HOST}`;
 const PROXY_TIMEOUT_MS = 15000;
+// Resposta da internet maior que isso é recusada (uma cotação tem poucos KB).
+const PROXY_MAX_BYTES = 5 * 1024 * 1024;
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -56,6 +61,7 @@ async function proxy(request, url) {
       signal: AbortSignal.timeout(PROXY_TIMEOUT_MS)
     });
     const body = await res.arrayBuffer();
+    if (body.byteLength > PROXY_MAX_BYTES) return text(502, 'Resposta grande demais');
     return new Response(body, { status: res.status, headers: { 'Content-Type': res.headers.get('content-type') || 'application/json' } });
   } catch (e) {
     // Sem internet ou site fora do ar: o app trata o erro e mantém o último valor salvo.
@@ -82,7 +88,9 @@ async function serveFile(pathname) {
   try {
     const body = await readFile(target);
     const type = MIME[path.extname(target).toLowerCase()] || 'application/octet-stream';
-    return new Response(body, { status: 200, headers: { 'Content-Type': type } });
+    const headers = { 'Content-Type': type, 'X-Content-Type-Options': 'nosniff' };
+    if (type.startsWith('text/html')) headers['Content-Security-Policy'] = CSP;
+    return new Response(body, { status: 200, headers });
   } catch {
     return text(404, 'Arquivo não encontrado. Rode "npm run build" antes de abrir o app desktop.');
   }
@@ -188,9 +196,14 @@ if (!app.requestSingleInstanceLock()) {
     app.setAppUserModelId('br.abner.controle-aportes'); // agrupa certo na barra de tarefas do Windows
     protocol.handle(SCHEME, handleAppProtocol);
 
-    // Permissões (pasta de backup, armazenamento persistente...) só para o próprio app.
-    session.defaultSession.setPermissionRequestHandler((webContents, _permission, callback, details) => {
-      callback(isOwnUrl(details?.requestingUrl || webContents.getURL()));
+    // Permissões (pasta de backup, armazenamento persistente...): só as da lista e só para o próprio app.
+    const allowed = (permission, url) => ALLOWED_PERMISSIONS.has(permission) && isOwnUrl(url || '');
+    session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
+      callback(allowed(permission, details?.requestingUrl || webContents.getURL()));
+    });
+    // O app não usa <webview> nem baixa nada da internet sozinho.
+    app.on('web-contents-created', (_event, contents) => {
+      contents.on('will-attach-webview', event => event.preventDefault());
     });
 
     buildMenu();

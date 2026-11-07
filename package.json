@@ -23,7 +23,7 @@
     "autoprefixer": "^10.4.21",
     "dexie": "^4.0.11",
     "dexie-react-hooks": "^1.1.7",
-    "electron": "^45.2.1",
+    "electron": "^45.2.3",
     "electron-builder": "^26.18.0",
     "eslint": "^9.39.5",
     "eslint-plugin-react": "^7.37.5",
@@ -55,6 +55,14 @@
       "!electron/**/*.test.js",
       "package.json"
     ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": false
+    },
     "win": {
       "target": "nsis",
       "icon": "build/icon.png",
@@ -69,5 +77,8 @@
       "shortcutName": "Controle de Aportes",
       "deleteAppDataOnUninstall": false
     }
+  },
+  "overrides": {
+    "minimatch@>=7.0.0 <11.0.1": "^11.0.5"
   }
 }

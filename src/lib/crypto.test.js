@@ -27,4 +27,28 @@ describe('backup com senha', () => {
     const [a, b] = await Promise.all([encryptJson(backup, 'senha-forte-123'), encryptJson(backup, 'senha-forte-123')]);
     expect(a.data).not.toBe(b.data);
   });
+  it('usa 600 mil repetições nos backups novos', async () => {
+    const file = await encryptJson(backup, 'senha-forte-123');
+    expect(file.kdf.iterations).toBe(600000);
+  });
+  it('continua abrindo backup antigo (310 mil repetições)', async () => {
+    const file = await encryptJson(backup, 'senha-forte-123');
+    // Simula um arquivo antigo refazendo a criptografia com 310 mil.
+    const salt = Uint8Array.from(atob(file.kdf.salt), c => c.charCodeAt(0));
+    const iv = Uint8Array.from(atob(file.cipher.iv), c => c.charCodeAt(0));
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode('senha-forte-123'), 'PBKDF2', false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 310000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, [
+      'encrypt'
+    ]);
+    const data = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(backup))));
+    let bin = '';
+    for (const b of data) bin += String.fromCharCode(b);
+    const old = { ...file, kdf: { ...file.kdf, iterations: 310000 }, data: btoa(bin) };
+    expect(await decryptJson(old, 'senha-forte-123')).toEqual(backup);
+  });
+  it('recusa arquivo adulterado que pede poucas ou repetições demais', async () => {
+    const file = await encryptJson(backup, 'senha-forte-123');
+    await expect(decryptJson({ ...file, kdf: { ...file.kdf, iterations: 1 } }, 'senha-forte-123')).rejects.toThrow('adulterado');
+    await expect(decryptJson({ ...file, kdf: { ...file.kdf, iterations: 1e12 } }, 'senha-forte-123')).rejects.toThrow('adulterado');
+  });
 });
