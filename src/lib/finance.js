@@ -114,7 +114,9 @@ export const allocationDate = (record, allocation) => allocation?.date || `${rec
 // Junta aportes mensais, avulsos e saques (negativos) de um bucket, em ordem de data.
 export function bucketContributions(bucketId, records = [], extras = [], withdrawals = []) {
   const monthly = records.flatMap(r =>
-    (r.allocations || []).filter(a => a.bucket_id === bucketId).map(a => ({ date: allocationDate(r, a), amount: Number(a.amount) || 0, dollar_rate: a.dollar_rate }))
+    (r.allocations || [])
+      .filter(a => a.bucket_id === bucketId)
+      .map(a => ({ date: allocationDate(r, a), amount: Number(a.amount) || 0, dollar_rate: a.dollar_rate }))
   );
   const avulsos = extras.filter(e => e.bucket_id === bucketId).map(e => ({ date: e.date, amount: Number(e.amount) || 0, dollar_rate: e.dollar_rate }));
   const saques = withdrawals.filter(w => w.bucket_id === bucketId).map(w => ({ date: w.date, amount: -withdrawalBrl(w), dollar_rate: w.dollar_rate }));
