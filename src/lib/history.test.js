@@ -8,6 +8,7 @@ import {
   computedBalances,
   contributionEvents,
   currentSnapshot,
+  dropSnapshotsFrom,
   milestonesReached,
   monthRange,
   nextMilestone,
@@ -154,4 +155,26 @@ describe('marcos e resumo', () => {
       gain: 1000,
       count: 3
     }));
+});
+
+describe('fotos congeladas x lançamentos retroativos (auditoria 18/11)', () => {
+  const hist = { '2026-09': { balance: 1 }, '2026-10': { balance: 2 }, '2026-11': { balance: 3 } };
+  it('apaga as fotos do mês do lançamento em diante, menos a do mês atual', () => {
+    expect(Object.keys(dropSnapshotsFrom(hist, '2026-10', '2026-11'))).toEqual(['2026-09', '2026-11']);
+  });
+  it('lançamento no mês atual não mexe em nada', () => {
+    expect(dropSnapshotsFrom(hist, '2026-11', '2026-11')).toBe(hist);
+  });
+  it('com a foto de outubro apagada, o ganho volta a ser o recalculado', () => {
+    const cx = { id: 'cx', rate_type: 'custom', rate_history: [{ rate: 14, start_date: '2026-01-01' }] };
+    const extras1 = [{ bucket_id: 'cx', amount: 1000, date: '2026-10-05' }];
+    const snaps = upsertSnapshot({}, '2026-10', '2026-10', currentSnapshot({ buckets: [cx], extras: extras1 }, new Date(2026, 9, 15)), 'x');
+    const data = { buckets: [cx], extras: [...extras1, { bucket_id: 'cx', amount: 2000, date: '2026-10-28' }] };
+    const months = monthRange('2026-10', '2026-11');
+    const args = { months, computed: computedBalances(months, data, new Date(2026, 10, 18)), events: contributionEvents(data) };
+    expect(buildTimeline({ ...args, snapshots: snaps })[0].gain).toBeLessThan(-1900); // o bug
+    const fixed = buildTimeline({ ...args, snapshots: dropSnapshotsFrom(snaps, '2026-10', '2026-11') });
+    expect(fixed[0].gain).toBeGreaterThan(0);
+    expect(fixed[0].gain).toBeLessThan(15);
+  });
 });

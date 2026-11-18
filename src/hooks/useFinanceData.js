@@ -4,11 +4,35 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, newId, stamp } from '@/db/database';
-import { colors, round, effectiveRate, rateHistory, stockQuantity, bucketCategory, rebalanceForAdd, rebalanceForDelete, rebalanceForEdit } from '@/lib/finance';
+import {
+  colors,
+  round,
+  effectiveRate,
+  rateHistory,
+  stockQuantity,
+  bucketCategory,
+  rateHistoryAfterEdit,
+  withdrawalOverdraft,
+  rebalanceForAdd,
+  rebalanceForDelete,
+  rebalanceForEdit
+} from '@/lib/finance';
 import { monthKey, today } from '@/lib/dates';
+import { dropSnapshotsFrom, SNAPSHOT_KEY } from '@/lib/history';
 import { fetchQuotes } from '@/services/quotes';
 
 const byDateDesc = (a, b) => String(b.date).localeCompare(String(a.date));
+
+// Um lançamento com data de um mês que já tem "foto" congelada deixaria a foto errada
+// (o gráfico mostraria um ganho ou perda que não existe). Então apagamos as fotos desse mês
+// em diante: esses meses voltam a ser recalculados a partir dos lançamentos.
+async function invalidateSnapshots(date) {
+  if (!date) return;
+  const row = await db.settings.get(SNAPSHOT_KEY);
+  if (!row?.value) return;
+  const next = dropSnapshotsFrom(row.value, String(date).slice(0, 7), monthKey());
+  if (next !== row.value) await db.settings.put({ key: SNAPSHOT_KEY, value: next });
+}
 
 export default function useFinanceData() {
   const buckets = useLiveQuery(() => db.buckets.orderBy('created_date').toArray(), []);
@@ -98,10 +122,8 @@ export default function useFinanceData() {
         out.percentage = round(Number(data.percentage));
       }
       if (data.rate_type || data.base_rate !== undefined || data.management_fee !== undefined || data.cdi_percentage !== undefined) {
-        const eff = effectiveRate({ ...current, ...data });
-        const history = rateHistory(current);
-        const last = history[history.length - 1];
-        out.rate_history = [...history.slice(0, -1), { ...last, rate: eff }];
+        const next = rateHistoryAfterEdit(current, data, today());
+        if (next) out.rate_history = next;
         if (data.base_rate !== undefined && Number(data.base_rate) !== Number(current.base_rate)) out.rate_updated_date = today();
       }
       await db.buckets.update(id, out);
@@ -133,6 +155,7 @@ export default function useFinanceData() {
       a.start_date.localeCompare(b.start_date)
     );
     await db.buckets.update(id, { base_rate: Number(base_rate), rate_history: history, rate_updated_date: today() });
+    await invalidateSnapshots(start);
   };
   const updateDollarRate = (id, rate) => db.buckets.update(id, { current_dollar_rate: Number(rate), dollar_rate_updated_date: today() });
 
@@ -186,8 +209,13 @@ export default function useFinanceData() {
       await db.buckets.update(bucket.id, { last_dollar_rate: Number(data.dollar_rate) });
     }
     await db.extras.add(payload);
+    await invalidateSnapshots(payload.date);
   };
-  const deleteExtraContribution = id => db.extras.delete(id);
+  const deleteExtraContribution = async id => {
+    const row = await db.extras.get(id);
+    await db.extras.delete(id);
+    await invalidateSnapshots(row?.date);
+  };
 
   const addWithdrawal = async data => {
     const bucket = await db.buckets.get(data.bucket_id);
@@ -204,10 +232,22 @@ export default function useFinanceData() {
       note: data.note || ''
     };
     if (bucket.rate_type === 'fed' && data.dollar_rate) payload.dollar_rate = Number(data.dollar_rate);
+    if (!(payload.amount > 0)) throw new Error('Informe um valor maior que zero.');
+    const [records, extras, withdrawals] = await Promise.all([db.records.toArray(), db.extras.toArray(), db.withdrawals.toArray()]);
+    const overdraft = withdrawalOverdraft(bucket, payload, { records, extras, withdrawals });
+    if (overdraft) throw new Error(overdraft);
     await db.withdrawals.add(payload);
+    await invalidateSnapshots(payload.date);
   };
-  const deleteWithdrawal = id => db.withdrawals.delete(id);
-  const restore = (table, row) => db[table].put(row); // usado pelo "Desfazer"
+  const deleteWithdrawal = async id => {
+    const row = await db.withdrawals.get(id);
+    await db.withdrawals.delete(id);
+    await invalidateSnapshots(row?.date);
+  };
+  const restore = async (table, row) => {
+    await db[table].put(row); // usado pelo "Desfazer"
+    await invalidateSnapshots(row?.date);
+  };
 
   // ---------- Meta ----------
   const saveGoal = async amount => {
@@ -221,6 +261,7 @@ export default function useFinanceData() {
     const stock = await db.stocks.get(stockId);
     if (!stock) throw new Error('Selecione um ativo.');
     await db.stocks.update(stockId, { contributions: [...(stock.contributions || []), { id: newId(), ...item }] });
+    await invalidateSnapshots(item.date);
   };
   const addStockContribution = data => {
     if (!Number(data.quantity)) throw new Error('Informe a quantidade.');
@@ -242,7 +283,10 @@ export default function useFinanceData() {
   };
   const deleteStockContribution = async (stockId, contributionId) => {
     const stock = await db.stocks.get(stockId);
-    if (stock) await db.stocks.update(stockId, { contributions: (stock.contributions || []).filter(c => c.id !== contributionId) });
+    if (!stock) return;
+    const removed = (stock.contributions || []).find(c => c.id === contributionId);
+    await db.stocks.update(stockId, { contributions: (stock.contributions || []).filter(c => c.id !== contributionId) });
+    await invalidateSnapshots(removed?.date);
   };
   const addStock = async data => {
     const ticker = String(data.ticker || '')

@@ -17,7 +17,13 @@ import {
   stockQuantity,
   stockDividendsReceived,
   round,
-  splitZeroBuckets
+  splitZeroBuckets,
+  totalBalance,
+  stockCost,
+  stockCostAsOf,
+  bucketBalance,
+  rateHistoryAfterEdit,
+  withdrawalOverdraft
 } from './finance';
 
 describe('taxa efetiva', () => {
@@ -84,9 +90,65 @@ describe('rebalanceamento', () => {
     expect(sum(out) + 10).toBe(100);
   });
   it('excluir redistribui e soma 100', () => expect(sum(rebalanceForDelete(buckets, buckets[2]))).toBe(100));
-  it('editar um percentual reajusta os outros', () => {
+  it('editar um percentual reajusta os outros e não mexe no protegido', () => {
     const out = rebalanceForEdit(buckets, 'b', 50);
-    expect(round(sum(out) + 50)).toBe(100);
+    expect(out.find(b => b.id === 'a')).toBeUndefined();
+    expect(out.find(b => b.id === 'c').percentage).toBe(10);
+    expect(round(sum(out) + 50 + 40)).toBe(100);
+  });
+  it('editar recusa um % que não cabe ao lado do protegido', () => {
+    expect(() => rebalanceForEdit(buckets, 'b', 70)).toThrow();
+  });
+  it('excluir quando os que ficam estão em 0% divide em partes iguais (sem NaN)', () => {
+    const list = [
+      { id: 'a', percentage: 60, protected: true },
+      { id: 'b', percentage: 0 },
+      { id: 'c', percentage: 0 },
+      { id: 'd', percentage: 40 }
+    ];
+    const out = rebalanceForDelete(list, list[3]);
+    expect(out.find(b => b.id === 'b').percentage).toBe(20);
+    expect(out.find(b => b.id === 'c').percentage).toBe(20);
+    expect(sum(out)).toBe(100);
+  });
+});
+
+describe('correções da auditoria de 18/11', () => {
+  const cx = { id: 'cx', rate_type: 'custom', base_rate: 14, rate_history: [{ rate: 14, start_date: '2026-01-01' }] };
+  it('aporte de hoje não rende antes de virar o dia, mesmo depois do meio-dia', () => {
+    const c = [{ date: '2026-11-18', amount: 1000 }];
+    expect(realBalance(cx, c, new Date(2026, 10, 18, 11, 0)).balance).toBe(1000);
+    expect(realBalance(cx, c, new Date(2026, 10, 18, 13, 0)).balance).toBe(1000);
+    expect(realBalance(cx, c, new Date(2026, 10, 18, 23, 59)).balance).toBe(1000);
+    expect(realBalance(cx, c, new Date(2026, 10, 19, 0, 1)).balance).toBe(1000.38);
+  });
+  it('venda com lucro não some do patrimônio', () => {
+    const stocks = [
+      {
+        id: 's',
+        contributions: [
+          { kind: 'buy', amount: 1000, quantity: 10, date: '2026-10-01' },
+          { kind: 'sell', amount: 1500, quantity: 10, date: '2026-10-10' }
+        ]
+      }
+    ];
+    const extras = [{ bucket_id: 'cx', amount: 1500, date: '2026-10-10' }];
+    expect(round(totalBalance([cx], [], extras, [], new Date(2026, 9, 10), stocks))).toBe(1500);
+  });
+  it('venda parcial deixa no patrimônio o custo das cotas que sobraram', () => {
+    const s = {
+      contributions: [
+        { kind: 'buy', amount: 1000, quantity: 10, date: '2026-10-01' },
+        { kind: 'sell', amount: 750, quantity: 5, date: '2026-10-10' }
+      ]
+    };
+    expect(stockCost([s])).toBe(500);
+    expect(stockCostAsOf([s], new Date(2026, 9, 5))).toBe(1000);
+  });
+  it('bucket em dólar sem cotação atual usa a cotação do lançamento, não 1', () => {
+    const fed = { id: 'us', rate_type: 'fed', rate_history: [{ rate: 0, start_date: '2026-01-01' }] };
+    const extras = [{ bucket_id: 'us', amount: 5400, dollar_rate: 5.4, date: '2026-11-01' }];
+    expect(bucketBalance(fed, [], extras, [], new Date(2026, 10, 18)).balance).toBe(5400);
   });
 });
 
@@ -159,6 +221,29 @@ describe('projeção com inflação e metas', () => {
   it('metas: com inflação, a meta em poder de compra de hoje demora mais', () => {
     const m = milestones(0, 600, 10, 5, [100000])[0];
     expect(m.monthsReal).toBeGreaterThan(m.months);
+  });
+  it('taxa mudada pelo Editar vale a partir de hoje, não para o passado', () => {
+    const tesouro = {
+      rate_type: 'selic',
+      base_rate: 13.75,
+      rate_history: [
+        { rate: 14, start_date: '2026-08-31' },
+        { rate: 13.75, start_date: '2026-10-29' }
+      ]
+    };
+    const next = rateHistoryAfterEdit(tesouro, { rate_type: 'selic', base_rate: 15 }, '2026-11-18');
+    expect(next).toEqual([
+      { rate: 14, start_date: '2026-08-31' },
+      { rate: 13.75, start_date: '2026-10-29' },
+      { rate: 15, start_date: '2026-11-18' }
+    ]);
+    expect(rateHistoryAfterEdit(tesouro, { rate_type: 'selic', base_rate: 13.75 }, '2026-11-18')).toBeNull();
+  });
+  it('saque maior que o saldo é recusado; dentro do saldo passa', () => {
+    const cx = { id: 'cx', name: 'Caixa', rate_type: 'custom', rate_history: [{ rate: 14, start_date: '2026-01-01' }] };
+    const data = { extras: [{ bucket_id: 'cx', amount: 100, date: '2026-01-01' }] };
+    expect(withdrawalOverdraft(cx, { amount: 500, date: '2026-02-01' }, data)).toMatch(/maior que o saldo/);
+    expect(withdrawalOverdraft(cx, { amount: 100, date: '2026-02-01' }, data)).toBeNull();
   });
 });
 

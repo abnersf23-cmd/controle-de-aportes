@@ -6,7 +6,7 @@ import Slider from '@/components/ui/Slider';
 import { compactBrl } from '@/components/charts/theme';
 import useSetting from '@/hooks/useSetting';
 import useMarketRates from '@/hooks/useMarketRates';
-import { brl, pct, projectionData, effectiveRate, bucketBalance, stockTotal, milestones, weightedAverageRate, realRate, dateLabel } from '@/lib/finance';
+import { brl, pct, projectionData, effectiveRate, bucketBalance, stockCost, milestones, weightedAverageRate, realRate, dateLabel } from '@/lib/finance';
 
 const PROJECTION_DEFAULTS = { inflation: null, stockReturn: 0, fromCurrent: true };
 const eta = months =>
@@ -32,7 +32,7 @@ export default function Projecao({ data }) {
   const rates = useMemo(() => (stockBucket ? { [stockBucket.id]: Number(o.stockReturn) || 0 } : {}), [stockBucket, o.stockReturn]);
   // Saldo de hoje por bucket (FIIs e Ações pelo valor aportado, como no patrimônio do Início).
   const start = useMemo(
-    () => Object.fromEntries(buckets.map(b => [b.id, b.kind === 'stocks' ? stockTotal(stocks) : bucketBalance(b, records, extras, withdrawals).balance])),
+    () => Object.fromEntries(buckets.map(b => [b.id, b.kind === 'stocks' ? stockCost(stocks) : bucketBalance(b, records, extras, withdrawals).balance])),
     [buckets, records, extras, withdrawals, stocks]
   );
   const current = Object.values(start).reduce((s, v) => s + v, 0);

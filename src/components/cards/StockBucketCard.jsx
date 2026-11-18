@@ -1,9 +1,9 @@
 import { ArrowRight } from 'lucide-react';
-import { brl, pct, round, stockNetAmount, stockMarketValue } from '@/lib/finance';
+import { brl, pct, round, stockCost, stockInvested, stockMarketValue } from '@/lib/finance';
 
 export default function StockBucketCard({ bucket, stocks = [], quotes = {}, onOpen }) {
-  const invested = round(stocks.reduce((s, st) => s + stockNetAmount(st), 0));
-  const market = round(stocks.reduce((s, st) => s + (stockMarketValue(st, quotes[st.ticker]) ?? stockNetAmount(st)), 0));
+  const invested = stockCost(stocks);
+  const market = round(stocks.reduce((s, st) => s + (stockMarketValue(st, quotes[st.ticker]) ?? stockInvested(st)), 0));
   const profit = round(market - invested);
   return (
     <button onClick={onOpen} className="card lift group p-5 text-left hover:border-[color:var(--c)]" style={{ '--c': `${bucket.color}99` }}>

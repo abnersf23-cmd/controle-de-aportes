@@ -17,7 +17,7 @@ import {
   stockInvested,
   stockMarketValue,
   stockQuantity,
-  stockTotal
+  stockCost
 } from '@/lib/finance';
 
 const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -160,8 +160,11 @@ export default function Acoes({ data, goTo }) {
     if (await run(fn, msg)) close();
   };
 
-  const invested = stockTotal(stocks);
-  const market = round(stocks.reduce((s, st) => s + (stockMarketValue(st, quotes[st.ticker]) ?? 0), 0));
+  // Investido = custo médio das cotas que você tem (o mesmo que os cards de cada ativo mostram).
+  // Ativo com cotas e sem cotação entra no mercado pelo custo, para não virar um prejuízo que não existe.
+  const invested = stockCost(stocks);
+  const missingQuotes = stocks.filter(st => stockQuantity(st) > 0 && stockMarketValue(st, quotes[st.ticker]) == null).length;
+  const market = round(stocks.reduce((s, st) => s + (stockMarketValue(st, quotes[st.ticker]) ?? stockInvested(st)), 0));
   const dividends = round(stocks.reduce((s, st) => s + (quotes[st.ticker]?.dividends ? stockDividendsReceived(st, quotes[st.ticker].dividends) : 0), 0));
   const monthlyIncome = round(stocks.reduce((s, st) => s + (dividendYield(st, quotes[st.ticker]).monthlyNow || 0), 0));
   const hasQuotes = stocks.some(st => stockMarketValue(st, quotes[st.ticker]) != null);
@@ -199,8 +202,18 @@ export default function Acoes({ data, goTo }) {
       </p>
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Aportado (líquido)" value={brl(invested)} />
-        <Stat label="Valor de mercado" value={hasQuotes ? brl(market) : quotesLoading ? '…' : '—'} hint={hasQuotes ? undefined : 'sem cotações'} />
+        <Stat label="Investido (custo das cotas)" value={brl(invested)} />
+        <Stat
+          label="Valor de mercado"
+          value={hasQuotes ? brl(market) : quotesLoading ? '…' : '—'}
+          hint={
+            !hasQuotes
+              ? 'sem cotações'
+              : missingQuotes
+                ? `${missingQuotes} ${missingQuotes === 1 ? 'ativo sem cotação entra' : 'ativos sem cotação entram'} pelo custo`
+                : undefined
+          }
+        />
         <Stat label="Dividendos recebidos" value={brl(dividends)} tone="good" hint={monthlyIncome > 0 ? `renda de ~${brl(monthlyIncome)}/mês` : undefined} />
         <Stat
           label="Resultado"
