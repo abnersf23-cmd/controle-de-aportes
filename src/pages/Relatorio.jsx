@@ -15,7 +15,7 @@ import {
 import { Empty, PageHeader, Segmented, Stat } from '@/components/ui/Bits';
 import downloadCsv from '@/lib/csv';
 import { today, toDateKey } from '@/lib/dates';
-import { brl, usd, dateLabel, monthLabel, totalBalance, round, withdrawalBrl } from '@/lib/finance';
+import { allocationDate, brl, usd, dateLabel, monthLabel, totalBalance, round, withdrawalBrl } from '@/lib/finance';
 
 const typeMeta = {
   aporte: { label: 'Aporte', icon: ArrowUpRight, cls: 'bg-good/10 text-good' },
@@ -51,7 +51,7 @@ export default function Relatorio({ data, goTo }) {
       ...records.flatMap(r =>
         (r.allocations || []).map(a => ({
           id: `mr-${r.id}-${a.bucket_id}`,
-          date: `${r.month}-01`,
+          date: allocationDate(r, a),
           bucket_id: a.bucket_id,
           name: a.bucket_name,
           type: 'aporte',

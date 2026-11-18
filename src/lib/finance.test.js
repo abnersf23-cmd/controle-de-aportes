@@ -5,6 +5,7 @@ import {
   projectionData,
   realRate,
   bucketContributions,
+  bucketBalance,
   dollarRealBalance,
   effectiveRate,
   goalProjection,
@@ -158,5 +159,27 @@ describe('projeção com inflação e metas', () => {
   it('metas: com inflação, a meta em poder de compra de hoje demora mais', () => {
     const m = milestones(0, 600, 10, 5, [100000])[0];
     expect(m.monthsReal).toBeGreaterThan(m.months);
+  });
+});
+
+// Bug de 2026-11: o "Aportei" só guardava o mês e o rendimento contava desde o dia 01.
+describe('aporte mensal rende a partir do dia real', () => {
+  const bucket = { id: 'b1', rate_type: 'custom', base_rate: 14, rate_history: [{ rate: 14, start_date: '2026-01-01' }] };
+  const comData = [{ month: '2026-11', allocations: [{ bucket_id: 'b1', amount: 1000, date: '2026-11-18' }] }];
+  const semData = [{ month: '2026-11', allocations: [{ bucket_id: 'b1', amount: 1000 }] }];
+
+  it('no dia do aporte o rendimento é zero', () => {
+    expect(bucketBalance(bucket, comData, [], [], '2026-11-18')).toEqual({ balance: 1000, contributed: 1000, yield: 0 });
+  });
+  it('rende só os dias depois do aporte (12 dias até 30/11)', () => {
+    const esperado = Math.round(1000 * Math.pow(1 + 0.14 / 365, 12) * 100) / 100;
+    expect(bucketBalance(bucket, comData, [], [], '2026-11-30').balance).toBe(esperado);
+  });
+  it('antes do dia do aporte ele ainda não aparece no saldo', () => {
+    expect(bucketBalance(bucket, comData, [], [], '2026-11-10').balance).toBe(0);
+  });
+  it('aportes antigos sem dia continuam no dia 01 (sem mudar saldos já lançados)', () => {
+    expect(bucketContributions('b1', semData)[0].date).toBe('2026-11-01');
+    expect(bucketBalance(bucket, semData, [], [], '2026-11-18').balance).toBe(1006.54);
   });
 });

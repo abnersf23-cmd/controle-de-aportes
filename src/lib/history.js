@@ -13,7 +13,7 @@
 //
 // O gráfico usa a foto quando ela existe e o recálculo quando não existe (meses de antes
 // desta função existir). Assim o histórico nunca fica vazio e, daqui para frente, fica fiel.
-import { bucketBalance, round, stockMarketValue, stockTotalAsOf, withdrawalBrl } from './finance';
+import { allocationDate, bucketBalance, round, stockMarketValue, stockTotalAsOf, withdrawalBrl } from './finance';
 
 export const SNAPSHOT_KEY = 'patrimonyHistory';
 export const MILESTONE_TARGETS = [10000, 100000, 500000, 1000000];
@@ -64,7 +64,7 @@ export function contributionEvents({ buckets = [], records = [], extras = [], wi
     ...records.flatMap(r =>
       (r.allocations || [])
         .filter(a => fixed.has(a.bucket_id))
-        .map(a => ({ date: `${r.month}-01`, asset: a.bucket_id, name: a.bucket_name || nameOf(a.bucket_id), type: 'mensal', amount: num(a.amount) }))
+        .map(a => ({ date: allocationDate(r, a), asset: a.bucket_id, name: a.bucket_name || nameOf(a.bucket_id), type: 'mensal', amount: num(a.amount) }))
     ),
     ...extras
       .filter(e => fixed.has(e.bucket_id))
