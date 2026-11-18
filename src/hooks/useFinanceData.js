@@ -147,7 +147,9 @@ export default function useFinanceData() {
       bucket_name: bucket.name,
       color: bucket.color,
       percentage: bucket.percentage,
-      amount: round(amount != null ? Number(amount) : (total * bucket.percentage) / 100)
+      amount: round(amount != null ? Number(amount) : (total * bucket.percentage) / 100),
+      // Dia real do aporte: o rendimento só começa a contar a partir daqui.
+      date: today()
     };
     if (bucket.rate_type === 'fed' && dollarRate) {
       item.dollar_rate = Number(dollarRate);

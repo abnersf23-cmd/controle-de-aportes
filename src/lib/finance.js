@@ -106,10 +106,15 @@ export function rateHistory(bucket = {}) {
 }
 
 // ---------- Saldos dos buckets ----------
+// Data em que o aporte mensal ("Aportei") entrou no bucket.
+// Desde 2026-11 cada aporte guarda o dia real em `date`; os antigos só tinham o mês,
+// então para eles continuamos usando o dia 01 (o mesmo comportamento de antes).
+export const allocationDate = (record, allocation) => allocation?.date || `${record.month}-01`;
+
 // Junta aportes mensais, avulsos e saques (negativos) de um bucket, em ordem de data.
 export function bucketContributions(bucketId, records = [], extras = [], withdrawals = []) {
   const monthly = records.flatMap(r =>
-    (r.allocations || []).filter(a => a.bucket_id === bucketId).map(a => ({ date: `${r.month}-01`, amount: Number(a.amount) || 0, dollar_rate: a.dollar_rate }))
+    (r.allocations || []).filter(a => a.bucket_id === bucketId).map(a => ({ date: allocationDate(r, a), amount: Number(a.amount) || 0, dollar_rate: a.dollar_rate }))
   );
   const avulsos = extras.filter(e => e.bucket_id === bucketId).map(e => ({ date: e.date, amount: Number(e.amount) || 0, dollar_rate: e.dollar_rate }));
   const saques = withdrawals.filter(w => w.bucket_id === bucketId).map(w => ({ date: w.date, amount: -withdrawalBrl(w), dollar_rate: w.dollar_rate }));
