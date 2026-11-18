@@ -21,7 +21,6 @@ import {
   totalBalance,
   stockCost,
   stockCostAsOf,
-  bucketBalance,
   rateHistoryAfterEdit,
   withdrawalOverdraft
 } from './finance';
