@@ -13,7 +13,7 @@
 //
 // O gráfico usa a foto quando ela existe e o recálculo quando não existe (meses de antes
 // desta função existir). Assim o histórico nunca fica vazio e, daqui para frente, fica fiel.
-import { allocationDate, bucketBalance, round, stockMarketValue, stockTotalAsOf, withdrawalBrl } from './finance';
+import { allocationDate, bucketBalance, round, stockCostAsOf, stockMarketValue, withdrawalBrl } from './finance';
 
 export const SNAPSHOT_KEY = 'patrimonyHistory';
 export const MILESTONE_TARGETS = [10000, 100000, 500000, 1000000];
@@ -106,7 +106,7 @@ export function computedBalances(months, { buckets = [], records = [], extras = 
       const asOf = end > now ? now : end;
       const row = {};
       fixed.forEach(b => (row[b.id] = round(bucketBalance(b, records, extras, withdrawals, asOf).balance)));
-      stocks.forEach(s => (row[stockId(s)] = stockTotalAsOf([s], asOf)));
+      stocks.forEach(s => (row[stockId(s)] = stockCostAsOf([s], asOf)));
       return [m, row];
     })
   );
@@ -120,7 +120,7 @@ export function currentSnapshot(data = {}, now = new Date()) {
   const events = contributionEvents(data);
   const assets = {};
   buckets.filter(b => b.kind !== 'stocks').forEach(b => (assets[b.id] = { balance: round(bucketBalance(b, records, extras, withdrawals, now).balance) }));
-  stocks.forEach(s => (assets[stockId(s)] = { balance: stockMarketValue(s, quotes[s.ticker]) ?? stockTotalAsOf([s], now) }));
+  stocks.forEach(s => (assets[stockId(s)] = { balance: stockMarketValue(s, quotes[s.ticker]) ?? stockCostAsOf([s], now) }));
   Object.keys(assets).forEach(id => (assets[id].invested = round(events.filter(e => e.asset === id).reduce((s, e) => s + e.amount, 0))));
   const sum = key => round(Object.values(assets).reduce((s, a) => s + a[key], 0));
   return { balance: sum('balance'), invested: sum('invested'), assets };
@@ -135,6 +135,18 @@ export function upsertSnapshot(history = {}, month, currentMonth, snap, at) {
   if (old && month < currentMonth) return history;
   if (old && JSON.stringify({ ...old, at: undefined }) === JSON.stringify({ ...snap, at: undefined })) return history;
   return { ...history, [month]: { ...snap, at } };
+}
+
+// Apaga as fotos CONGELADAS de `fromMonth` em diante (a do mês atual fica, ela se atualiza sozinha).
+// Usado quando entra, sai ou muda um lançamento com data num mês que já tem foto: o saldo daquele
+// mês e dos seguintes mudou, então eles voltam a ser recalculados. Devolve o MESMO objeto se nada mudou.
+export function dropSnapshotsFrom(history = {}, fromMonth, currentMonth) {
+  if (!fromMonth || fromMonth >= currentMonth) return history;
+  const stale = Object.keys(history).filter(m => m >= fromMonth && m < currentMonth);
+  if (!stale.length) return history;
+  const next = { ...history };
+  stale.forEach(m => delete next[m]);
+  return next;
 }
 
 // Monta a linha do tempo de um ativo, do grupo de FIIs e ações (asset = 'stocks') ou do total (asset = 'total').

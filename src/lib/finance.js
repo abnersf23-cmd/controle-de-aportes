@@ -15,8 +15,11 @@ export function toDate(value) {
 }
 const byDate = key => (a, b) => toDate(a[key]) - toDate(b[key]);
 const DAY = 86400000;
-// Dias entre duas datas, sem erro no horário de verão (arredonda a diferença).
-const daysBetween = (a, b) => Math.round((b - a) / DAY);
+// Número do dia no calendário (ignora a hora). Usar Date.UTC evita erro no horário de verão.
+const dayNumber = d => Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / DAY);
+// Dias de calendário COMPLETOS entre duas datas. Antes era Math.round da diferença em horas:
+// um aporte de hoje, olhado depois do meio-dia, já ganhava 1 dia de juros (0,54 dia → 1).
+const daysBetween = (a, b) => dayNumber(b) - dayNumber(a);
 
 export const brl = (value = 0) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value) || 0);
 export const usd = (value = 0) => `US$ ${Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -68,21 +71,28 @@ export function rebalanceForDelete(buckets, removed) {
   const editable = remaining.filter(bucket => !bucket.protected);
   const total = editable.reduce((sum, bucket) => sum + bucket.percentage, 0);
   if (!editable.length) throw new Error('Mantenha ao menos um bucket não protegido.');
+  // Se os que ficam estão todos em 0%, dividir pelo total daria divisão por zero (NaN):
+  // nesse caso o % do excluído é dividido em partes iguais.
+  const share = bucket => (total > 0 ? (removed.percentage * bucket.percentage) / total : removed.percentage / editable.length);
   const adjusted = closeToTarget(
-    editable.map(bucket => ({ ...bucket, percentage: bucket.percentage + (removed.percentage * bucket.percentage) / total })),
+    editable.map(bucket => ({ ...bucket, percentage: bucket.percentage + share(bucket) })),
     total + removed.percentage
   );
   return remaining.map(bucket => (bucket.protected ? bucket : adjusted.find(item => item.id === bucket.id)));
 }
-// Muda o % de um bucket e redistribui a diferença proporcionalmente entre os outros.
+// Muda o % de um bucket e redistribui a diferença proporcionalmente entre os outros
+// NÃO protegidos. O protegido mantém o % dele (igual ao adicionar e ao excluir).
 export function rebalanceForEdit(buckets, id, target) {
   const others = buckets.filter(b => b.id !== id);
-  if (target <= 0 || target >= 100 || !others.length) throw new Error('Informe um percentual entre 0 e 100 e mantenha outros buckets para redistribuir.');
-  const remainder = round(100 - target);
-  const othersTotal = others.reduce((s, b) => s + Number(b.percentage), 0);
-  const adjusted = others.map(b => ({
+  const editable = others.filter(b => !b.protected);
+  const fixedTotal = others.filter(b => b.protected).reduce((s, b) => s + Number(b.percentage), 0);
+  const remainder = round(100 - target - fixedTotal);
+  if (target <= 0 || target >= 100 || !editable.length || remainder < 0)
+    throw new Error('Informe um percentual entre 0 e 100 que caiba ao lado do bucket protegido, e mantenha outros buckets para redistribuir.');
+  const editableTotal = editable.reduce((s, b) => s + Number(b.percentage), 0);
+  const adjusted = editable.map(b => ({
     id: b.id,
-    percentage: round(othersTotal > 0 ? (Number(b.percentage) * remainder) / othersTotal : remainder / others.length)
+    percentage: round(editableTotal > 0 ? (Number(b.percentage) * remainder) / editableTotal : remainder / editable.length)
   }));
   adjusted[adjusted.length - 1].percentage = round(
     adjusted[adjusted.length - 1].percentage + round(remainder - adjusted.reduce((s, b) => s + b.percentage, 0))
@@ -103,6 +113,17 @@ export function rateHistory(bucket = {}) {
   if (history.length) return [...history].sort(byDate('start_date'));
   const start = (bucket.created_date || localToday()).slice(0, 10);
   return [{ rate: effectiveRate(bucket), start_date: start }];
+}
+
+// Histórico de taxas depois de editar o bucket (lápis). A taxa nova vale a partir de `start`
+// (hoje), como no botão "Taxa". Antes o app trocava a taxa da última linha do histórico, e o
+// rendimento do passado era recalculado com a taxa nova. Devolve null se a taxa não mudou.
+export function rateHistoryAfterEdit(current = {}, data = {}, start = localToday()) {
+  const eff = effectiveRate({ ...current, ...data });
+  const history = rateHistory(current);
+  const last = history[history.length - 1];
+  if (round(eff) === round(last.rate)) return null;
+  return [...history.filter(h => h.start_date !== start), { rate: eff, start_date: start }].sort(byDate('start_date'));
 }
 
 // ---------- Saldos dos buckets ----------
@@ -192,7 +213,8 @@ export function dollarRealBalance(bucket, contributions = [], currentRate, asOf 
   const contributed = round(contribs.reduce((s, c) => s + Number(c.amount || 0), 0));
   if (!contribs.length) return { balance: 0, contributed: 0, yield: 0, exchange: 0, usdBalance: 0, usdContributed: 0, usdYield: 0, usdExchange: 0 };
   const history = rateHistory(bucket);
-  const rate = Number(currentRate) || contribs[0]?.dollar_rate || 1;
+  // Sem cotação atual, usa a do primeiro lançamento que tiver cotação (antes caía em US$ 1 = R$ 1).
+  const rate = Number(currentRate) || Number(contribs.find(c => Number(c.dollar_rate) > 0)?.dollar_rate) || 1;
   let usdBalance = 0,
     usdContributed = 0,
     yieldBRL = 0,
@@ -220,7 +242,23 @@ export function dollarRealBalance(bucket, contributions = [], currentRate, asOf 
 
 export function bucketBalance(bucket, records, extras, withdrawals, asOf = new Date()) {
   const contribs = bucketContributions(bucket.id, records, extras, withdrawals);
-  return bucket.rate_type === 'fed' ? dollarRealBalance(bucket, contribs, bucket.current_dollar_rate || 1, asOf) : realBalance(bucket, contribs, asOf);
+  return bucket.rate_type === 'fed'
+    ? dollarRealBalance(bucket, contribs, bucket.current_dollar_rate || bucket.last_dollar_rate, asOf)
+    : realBalance(bucket, contribs, asOf);
+}
+
+// Confere se um saque cabe no saldo do bucket NA DATA dele. Devolve a mensagem de erro, ou null.
+// Sem isso o saldo ficava negativo e "rendia" juros negativos. Folga de 1 (R$ ou US$) para
+// diferenças de centavos entre o app e o banco.
+export function withdrawalOverdraft(bucket, withdrawal, { records = [], extras = [], withdrawals = [] } = {}) {
+  if (!withdrawal?.date) return null;
+  const bal = bucketBalance(bucket, records, extras, withdrawals, withdrawal.date);
+  const isDollar = bucket.rate_type === 'fed';
+  const available = isDollar ? bal.usdBalance || 0 : bal.balance;
+  const amount = Number(withdrawal.amount) || 0;
+  if (amount <= available + 1) return null;
+  const fmt = isDollar ? usd : brl;
+  return `O saque de ${fmt(amount)} é maior que o saldo de ${bucket.name} em ${dateLabel(withdrawal.date)} (${fmt(available)}). Confira o valor, a data ou a taxa do bucket.`;
 }
 
 // Separa os buckets da tela inicial em visíveis e ocultos. Um bucket fica oculto
@@ -280,8 +318,10 @@ export function stockMonthTotal(stocks = [], month) {
   );
 }
 // Custo da posição atual pelo preço médio (vendas tiram custo proporcional).
-export function stockInvested(stock) {
-  const items = [...(stock.contributions || [])].sort(byDate('date'));
+// Com `asOf`, considera só as operações até essa data.
+export function stockInvested(stock, asOf = null) {
+  const limit = asOf ? toDate(asOf) : null;
+  const items = [...(stock.contributions || [])].filter(c => !limit || toDate(c.date) <= limit).sort(byDate('date'));
   let quantity = 0,
     cost = 0;
   for (const c of items) {
@@ -297,6 +337,15 @@ export function stockInvested(stock) {
     }
   }
   return round(Math.max(0, cost));
+}
+// Quanto as ações valem no patrimônio "pelo valor aportado": o CUSTO das cotas que você ainda tem.
+// Antes o app somava compras − valor recebido nas vendas, e o lucro de uma venda sumia do
+// patrimônio (comprar por R$ 1.000 e vender por R$ 1.500 deixava as ações em −R$ 500).
+export function stockCost(stocks = []) {
+  return round(stocks.reduce((sum, s) => sum + stockInvested(s), 0));
+}
+export function stockCostAsOf(stocks = [], asOf = new Date()) {
+  return round(stocks.reduce((sum, s) => sum + stockInvested(s, asOf), 0));
 }
 export function stockQuantity(stock) {
   return round((stock.contributions || []).reduce((s, c) => s + signedQuantity(c), 0));
@@ -321,10 +370,10 @@ export function stockMarketValue(stock, quote) {
 }
 
 // ---------- Patrimônio ----------
-// Igual ao original: ações entram pelo valor aportado (não pelo valor de mercado).
+// Ações entram pelo valor aportado (custo médio das cotas que você tem), não pelo valor de mercado.
 export function totalBalance(buckets, records, extras, withdrawals, asOf = new Date(), stocks = []) {
   const bucketTotal = buckets.filter(b => b.kind !== 'stocks').reduce((sum, b) => sum + bucketBalance(b, records, extras, withdrawals, asOf).balance, 0);
-  return bucketTotal + stockTotalAsOf(stocks, asOf);
+  return bucketTotal + stockCostAsOf(stocks, asOf);
 }
 // Taxa média da carteira, pesada pelo % de cada bucket. `rates` substitui a taxa de algum bucket.
 export function weightedAverageRate(buckets = [], rates = {}) {

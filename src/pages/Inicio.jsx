@@ -27,12 +27,12 @@ import {
   bucketBalance,
   daysSince,
   totalBalance,
-  stockTotal,
+  stockCost,
   bucketCategory,
   withdrawalBrl,
   round,
   stockMarketValue,
-  stockNetAmount,
+  stockInvested,
   splitZeroBuckets
 } from '@/lib/finance';
 
@@ -77,7 +77,7 @@ export default function Inicio({ data, goTo }) {
   const dollarBucket = buckets.find(b => b.rate_type === 'fed');
   const dollarStale = daysSince(dollarBucket?.dollar_rate_updated_date);
   const balances = useMemo(() => trading.map(b => ({ b, bal: bucketBalance(b, records, extras, withdrawals) })), [trading, records, extras, withdrawals]);
-  const totalValue = balances.reduce((s, x) => s + x.bal.balance, 0) + stockTotal(stocks);
+  const totalValue = balances.reduce((s, x) => s + x.bal.balance, 0) + stockCost(stocks);
   const totalYield = balances.reduce((s, x) => s + (x.bal.yield || 0) + (x.bal.exchange || 0), 0);
   const monthOut = withdrawals.filter(w => (w.date || '').slice(0, 7) === monthKey()).reduce((s, w) => s + withdrawalBrl(w), 0);
   const avgMonthly = records.length ? records.reduce((s, r) => s + r.planned_total, 0) / records.length : 0;
@@ -112,7 +112,7 @@ export default function Inicio({ data, goTo }) {
 
   const fixedPie = balances.map(({ b: x, bal }) => ({ id: x.id, name: `${x.icon} ${x.name}`, value: Math.max(0, bal.balance), color: x.color }));
   const varPie = stocks
-    .map(s => ({ id: s.id, name: s.ticker, value: stockMarketValue(s, quotes[s.ticker]) ?? stockNetAmount(s), color: s.color }))
+    .map(s => ({ id: s.id, name: s.ticker, value: stockMarketValue(s, quotes[s.ticker]) ?? stockInvested(s), color: s.color }))
     .filter(d => d.value > 0);
   const varTotal = round(varPie.reduce((s, d) => s + d.value, 0));
   const fullPie = [...fixedPie, ...(varTotal > 0 ? [{ id: 'rv', name: '📊 FIIs e Ações', value: varTotal, color: stockBucket?.color || '#DC2626' }] : [])];
